@@ -1,0 +1,161 @@
+import { DocTable } from "@/components/docs/doc-table"
+
+# Strategy Catalog
+
+Artic includes 30+ quantitative trading strategies across 5 categories. Every algorithm follows the same contract:
+
+```python
+def strategy_name(candles, prices, **params) -> (signal: float, detail: str)
+```
+
+- `signal > 0` → bullish (go long)
+- `signal < 0` → bearish (go short)
+- `signal == 0` → neutral (no action)
+
+The `detail` string provides human-readable reasoning for the signal.
+
+---
+
+## Momentum (8 strategies)
+
+Momentum strategies identify and follow price trends.
+
+<DocTable
+  headers={["Strategy", "Description"]}
+  rows={[
+    [<code>simple_momentum</code>, "Price rate of change over lookback period"],
+    [<code>dual_momentum</code>, "Compares absolute and relative momentum"],
+    [<code>breakout</code>, "Detects price breaking above/below N-period high/low"],
+    [<code>donchian_channel</code>, "Donchian channel breakout with configurable period"],
+    [<code>ma_crossover</code>, "Simple moving average crossover (fast/slow)"],
+    [<code>ema_crossover</code>, "Exponential moving average crossover"],
+    [<code>macd_signal</code>, "MACD line vs signal line crossover"],
+    [<code>supertrend</code>, "ATR-based trend following indicator"],
+  ]}
+/>
+
+### Example: Momentum Breakout
+
+```python
+# Agent config
+{
+  "strategy_name": "breakout",
+  "risk_params": {
+    "max_position_usd": 2000,
+    "stop_loss_pct": 1.5,
+    "take_profit_pct": 3.0
+  }
+}
+```
+
+The LLM planner may also auto-select from this category based on market conditions.
+
+---
+
+## Mean Reversion (6 strategies)
+
+Mean reversion strategies bet on prices returning to a statistical mean.
+
+<DocTable
+  headers={["Strategy", "Description"]}
+  rows={[
+    [<code>z_score</code>, "Z-score of price relative to rolling mean"],
+    [<code>bollinger_reversion</code>, "Bollinger Band reversion signals"],
+    [<code>rsi_signal</code>, "RSI overbought/oversold with configurable thresholds"],
+    [<code>stochastic_signal</code>, "Stochastic oscillator K/D crossover"],
+    [<code>range_sr</code>, "Support/resistance level identification"],
+    [<code>bollinger_squeeze</code>, "Bollinger Band squeeze breakout detection"],
+  ]}
+/>
+
+### When to Use
+
+Mean reversion works best in ranging/sideways markets. The LLM planner detects these conditions and selects mean reversion strategies when appropriate.
+
+---
+
+## Volatility (3 strategies)
+
+Volatility strategies trade based on changes in market volatility.
+
+<DocTable
+  headers={["Strategy", "Description"]}
+  rows={[
+    [<code>atr_breakout</code>, "ATR-based breakout detection"],
+    [<code>keltner_bollinger</code>, "Keltner Channel vs Bollinger Band squeeze"],
+    [<code>vwap_deviation</code>, "Volume-weighted average price deviation"],
+  ]}
+/>
+
+---
+
+## Volume (3 strategies)
+
+Volume strategies use trading volume to confirm or predict price moves.
+
+<DocTable
+  headers={["Strategy", "Description"]}
+  rows={[
+    [<code>obv_trend</code>, "On-Balance Volume trend analysis"],
+    [<code>adx_filter</code>, "ADX strength filter for trend confirmation"],
+    [<code>ichimoku_signal</code>, "Ichimoku cloud signal generation"],
+  ]}
+/>
+
+---
+
+## Statistical (2 strategies)
+
+Statistical strategies use mathematical models to find trading opportunities.
+
+<DocTable
+  headers={["Strategy", "Description"]}
+  rows={[
+    [<code>linear_regression_channel</code>, "Linear regression channel breakout"],
+    [<code>kalman_fair_value</code>, "Kalman filter fair value estimation"],
+  ]}
+/>
+
+---
+
+## Utilities
+
+### Risk Sizing
+
+<DocTable
+  headers={["Function", "Purpose"]}
+  rows={[
+    [<code>kelly_size</code>, "Kelly criterion position sizing"],
+    [<code>vol_scaling_mult</code>, "Volatility-scaled position multiplier"],
+  ]}
+/>
+
+### Time Filters
+
+<DocTable
+  headers={["Function", "Purpose"]}
+  rows={[
+    [<code>session_filter</code>, "Filter signals by trading session (Asia/EU/US)"],
+    [<code>day_of_week_filter</code>, "Filter signals by day of week"],
+  ]}
+/>
+
+---
+
+## LLM Strategy Selection
+
+When the LLM planner is enabled, the agent doesn't rely on a fixed strategy. Instead:
+
+1. **Market analysis**: The LLM receives candle data, technical indicators (ATR, ADX, volatility), and price history
+2. **Strategy selection**: The LLM picks the best strategy for current conditions
+3. **Parameter tuning**: The LLM defines lookback period, threshold, and risk parameters
+4. **Reasoning capture**: Full reasoning text is logged for audit
+
+The LLM can switch strategies between planning cycles based on changing market conditions.
+
+## Adding Custom Strategies
+
+1. Create your algorithm in `app/strategies/quant_algos/`
+2. Follow the contract: return `(signal: float, detail: str)`
+3. Register in `app/strategies/signals.py` dispatcher
+4. Never read live prices inside the algo — use candle arrays only

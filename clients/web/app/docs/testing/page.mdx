@@ -1,0 +1,86 @@
+# Testing
+
+Artic uses **pytest** for all testing. Tests mirror the source code structure.
+
+## Test Structure
+
+```
+tests/
+├── hub/                    # Hub tests
+│   ├── test_auth.py        # JWT + API key auth flows
+│   ├── test_agents.py      # Agent lifecycle CRUD
+│   ├── test_ws.py          # WebSocket streaming
+│   ├── test_secrets.py     # Secret management
+│   └── test_market_cache.py # Candle caching
+├── app/                    # App tests
+│   ├── test_engine.py      # Trading loop orchestration
+│   ├── test_market.py      # Market data clients
+│   ├── test_llm.py         # LLM planner integration
+│   ├── strategies/         # Strategy algorithm tests
+│   │   ├── test_momentum.py
+│   │   ├── test_mean_reversion.py
+│   │   ├── test_volatility.py
+│   │   ├── test_volume.py
+│   │   └── test_statistical.py
+│   └── pyth_api_connection/ # Pyth integration tests
+├── clients/
+│   ├── tui/                # TUI screen tests
+│   ├── cli/                # CLI command tests
+│   └── telegram/           # Bot handler tests
+```
+
+## Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific module tests
+pytest tests/hub/
+pytest tests/app/strategies/
+
+# Run with verbose output
+pytest -v
+
+# Run a single test file
+pytest tests/app/test_engine.py
+```
+
+## Testing Conventions
+
+### General Rules
+
+- Test files mirror source: `engine.py` → `test_engine.py`
+- **Mock all external services** — no real API calls to Pyth, TwelveData, LLMs
+- **Mock Docker** for hub agent lifecycle tests
+- Never assert on plaintext API keys in fixtures (use dummy ciphertext)
+- All agent queries must be user-scoped in tests
+
+### Strategy Tests
+
+- Verify the `(signal: float, detail: str)` contract
+- Pass **candle arrays only** — never mock live prices
+- Test edge cases: empty candles, insufficient data, extreme values
+- Verify signal semantics: `> 0` bullish, `< 0` bearish, `== 0` neutral
+
+### Hub Tests
+
+- Verify JWT + API key auth flows
+- Test agent lifecycle: create → start → stop → delete
+- Test WebSocket message broadcasting
+- Test secret encryption/decryption roundtrip
+- Test market cache staleness logic
+
+### Client Tests
+
+- TUI: Test screen rendering and navigation
+- CLI: Test command output with `--json` flag
+- Telegram: Test message formatting and command handling
+
+## Writing New Tests
+
+1. Create test file mirroring the source path
+2. Mock external dependencies (LLM, market data, Docker)
+3. Follow the `(signal, detail)` contract for strategy tests
+4. Scope all agent operations to a test user
+5. Never use real API keys — use fixtures with dummy values

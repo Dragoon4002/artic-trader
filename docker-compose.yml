@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  hub:
+    build:
+      context: .
+      dockerfile: hub/Dockerfile
+    ports:
+      - "9000:9000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - INTERNAL_SECRET=${INTERNAL_SECRET:-artic-dev-secret}
+      - JWT_SECRET=${JWT_SECRET:-artic-jwt-dev-secret}
+      - TWELVE_DATA_API_KEY=${TWELVE_DATA_API_KEY:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - artic-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  artic-net:
+    name: artic-net
+    driver: bridge

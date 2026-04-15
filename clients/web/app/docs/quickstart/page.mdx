@@ -1,0 +1,141 @@
+import { Callout } from "@/components/docs/callout"
+import { DocTable } from "@/components/docs/doc-table"
+
+# Quickstart
+
+Get Artic running locally in under 5 minutes.
+
+<Callout type="tip" title="Prerequisites">
+Docker + Docker Compose, Python 3.11+, PostgreSQL (or use Docker), and an API key for at least one LLM provider (OpenAI, Anthropic, DeepSeek, or Gemini).
+</Callout>
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/silonelabs/artic.git
+cd artic
+```
+
+## 2. Configure Environment
+
+Copy the example environment file and fill in your API keys:
+
+```bash
+cp .env.example .env
+```
+
+**Required variables:**
+
+<DocTable
+  headers={["Variable", "Purpose"]}
+  rows={[
+    [<code>DATABASE_URL</code>, "PostgreSQL connection string"],
+    [<code>INTERNAL_SECRET</code>, "Agent → Hub authentication"],
+    [<code>JWT_SECRET</code>, "JWT signing key"],
+  ]}
+/>
+
+**At least one LLM provider:**
+
+<DocTable
+  headers={["Variable", "Provider"]}
+  rows={[
+    [<code>OPENAI_API_KEY</code>, "OpenAI (GPT-4o)"],
+    [<code>ANTHROPIC_API_KEY</code>, "Anthropic (Claude)"],
+    [<code>DEEPSEEK_API_KEY</code>, "DeepSeek"],
+    [<code>GEMINI_API_KEY</code>, "Google Gemini"],
+  ]}
+/>
+
+<details>
+<summary>Optional environment variables</summary>
+
+<DocTable
+  headers={["Variable", "Purpose"]}
+  rows={[
+    [<code>TWELVE_DATA_API_KEY</code>, "OHLCV candle data (rate-limited 8 req/min)"],
+    [<code>CMC_API_KEY</code>, "CoinMarketCap token metadata"],
+    [<code>TELEGRAM_BOT_TOKEN</code>, "Telegram bot client"],
+    [<code>HASHKEY_API_KEY</code>, "HashKey Global exchange API"],
+    [<code>HASHKEY_SECRET</code>, "HashKey Global signing secret"],
+    [<code>HSK_RPC_URL</code>, "HashKey Chain RPC for on-chain logging"],
+    [<code>HSK_PRIVATE_KEY</code>, "On-chain logger private key"],
+  ]}
+/>
+
+</details>
+
+## 3. Start the Hub
+
+```bash
+docker compose up -d
+```
+
+This starts the hub on port **9000** with the `artic-net` Docker network.
+
+<Callout type="info" title="Database migrations">
+If this is your first run, apply migrations: `cd hub && alembic upgrade head`
+</Callout>
+
+## 4. Create a User Account
+
+```bash
+curl -X POST http://localhost:9000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "trader@example.com", "password": "your-password"}'
+```
+
+You'll receive an access token (15 min) and refresh token.
+
+## 5. Launch Your First Agent
+
+```bash
+curl -X POST http://localhost:9000/api/agents \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "BTC/USDT",
+    "strategy_name": "momentum_breakout",
+    "interval_seconds": 1,
+    "live_mode": false,
+    "risk_params": {
+      "max_position_usd": 1000,
+      "stop_loss_pct": 2.0,
+      "take_profit_pct": 4.0
+    }
+  }'
+```
+
+The hub will:
+1. Create a Docker container for the agent
+2. Inject secrets as environment variables
+3. Start the trading loop in paper mode
+
+<Callout type="warning" title="Paper mode only">
+Set `live_mode: false` until you've configured your HashKey Global API keys. Paper trading simulates execution without placing real orders.
+</Callout>
+
+## 6. Monitor Your Agent
+
+**Via REST API:**
+```bash
+curl http://localhost:9000/api/agents \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Via WebSocket** (real-time streaming):
+```bash
+wscat -c "ws://localhost:9000/ws?token=YOUR_ACCESS_TOKEN"
+```
+
+**Via TUI** (terminal UI):
+```bash
+cd clients/tui
+python -m tui
+```
+
+## What's Next?
+
+- [Agent Configuration](/docs/agent-configuration) — all config options and risk parameters
+- [Strategy Catalog](/docs/strategies) — browse and understand each algorithm
+- [Client Guides](/docs/clients) — set up TUI, CLI, or Telegram bot

@@ -1,0 +1,89 @@
+import { DocTable } from "@/components/docs/doc-table"
+
+# Architecture
+
+Artic uses a **hub-and-spoke** architecture where a central hub orchestrates isolated Docker agent containers.
+
+## System Topology
+
+<img src="/diagrams/image.png" alt="System Topology" className="w-full max-w-2xl mb-6 rounded-xl border border-white/8" />
+
+## Module Responsibilities
+
+### Hub
+- **Auth**: JWT (15 min access token) + API key (SHA-256 hashed)
+- **Agent Lifecycle**: CRUD, Docker spawn/stop, heartbeat monitoring
+- **Market Cache**: TwelveData candles via APScheduler (60s staleness, 8 req/min budget)
+- **WebSocket**: Real-time streaming of agent status, trades, logs to clients
+- **Secrets**: AES-encrypted storage with 3-tier resolution
+- **Database**: PostgreSQL via async SQLAlchemy + Alembic migrations
+
+### App (Trading Engine)
+- **Tick Loop**: Configurable interval (default 1s). Fetch price → compute indicators → run strategy → execute trades
+- **LLM Planner**: Analyzes market data, selects optimal strategy, defines risk parameters
+- **LLM Supervisor**: Optional cycle-based check on open positions for dynamic TP/SL adjustments
+- **Executors**: Paper trading (in-memory) or HashKey Global REST API
+- **On-chain Logging**: Supervisor decisions → `DecisionLogged` event on HashKey Chain
+
+### Strategies
+- **30+ algorithms** across 5 categories
+- **Dispatcher**: `signals.py` maps strategy name → algo function
+- **Contract**: Every algo returns `(signal: float, detail: str)`
+
+### Clients
+- **Thin presentation layers** — all state lives in the hub
+- **Hub SDK** (`hub/client.py`) used by all clients
+
+## Data Flow
+
+### Candle Data
+```
+TwelveData → Hub (APScheduler, 60s cache) → Agents (fetch from hub)
+```
+Rate-limited to **8 requests/minute**. Hub manages budget centrally.
+
+### Live Prices
+```
+Pyth Hermes → Agent (direct, free, no rate limit)
+```
+
+### Agent → Hub (Push-based)
+<DocTable
+  headers={["Endpoint", "Frequency", "Payload"]}
+  rows={[
+    [<code>POST /internal/agents/{"{id}"}/status</code>, "Every tick", "Current state, position, P&L"],
+    [<code>POST /internal/trades</code>, "On open/close", "Trade details"],
+    [<code>POST /internal/logs</code>, "Every 10 ticks", "Log batch"],
+  ]}
+/>
+
+All internal endpoints use `X-Internal-Secret` header authentication.
+
+## Database Schema
+
+8 PostgreSQL tables:
+
+<DocTable
+  headers={["Table", "Purpose"]}
+  rows={[
+    [<code>users</code>, "Accounts (email, password hash, API key hash)"],
+    [<code>agents</code>, "Agent config (symbol, strategy, risk params, container ID)"],
+    [<code>trades</code>, "Position records (side, entry/exit price, PnL)"],
+    [<code>log_entries</code>, "Append-only logs (level, message, timestamp)"],
+    [<code>market_cache</code>, "Candle cache (symbol, timeframe, JSONB candles)"],
+    [<code>user_secrets</code>, "Encrypted API keys (AES ciphertext)"],
+    [<code>agent_secret_overrides</code>, "Per-agent encrypted secrets"],
+    [<code>onchain_decisions</code>, "On-chain audit trail (tx hash, reasoning)"],
+  ]}
+/>
+
+See [Authentication](/docs/authentication) for secret management details.
+
+## Key Invariants
+
+1. **Agents are stateless across restarts** — persistent state lives in hub PostgreSQL
+2. **Clients never talk to agent containers** — hub proxies everything
+3. **One agent = one symbol** — isolation guarantees
+4. **API keys never stored in plaintext** — AES encryption mandatory
+5. **Agent→Hub is push-based** — agents POST status/trades/logs to hub
+6. **Hub owns TwelveData rate budget** — 8 req/min, centrally managed

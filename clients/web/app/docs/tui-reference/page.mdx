@@ -1,0 +1,154 @@
+import { Callout } from "@/components/docs/callout"
+import { DocTable } from "@/components/docs/doc-table"
+
+# TUI Reference
+
+Full-featured terminal UI built with Textual. Keyboard-first, live-updating agent management.
+
+## Setup
+
+```bash
+cd clients/tui
+pip install -r requirements.txt
+python -m tui
+```
+
+## Global Keybindings
+
+Available from any screen:
+
+<DocTable
+  headers={["Key", "Action"]}
+  rows={[
+    [<code>Ctrl+C</code>, "Quit application"],
+    [<code>1</code>, "Switch to Dashboard"],
+    [<code>2</code>, "Switch to Create Agent"],
+    [<code>3</code>, "Switch to Log Viewer"],
+    [<code>4</code>, "Switch to ASCII Lab"],
+    [<code>5</code>, "Switch to Leaderboard"],
+  ]}
+/>
+
+---
+
+## Dashboard
+
+Main screen. Left panel lists agents with live PnL, right panel shows details for the selected agent (Overview, Strategy, Models, Config).
+
+Agents poll every 2s. Running agents show green dot, stopped show red. Risk tags: `[C]` conservative, `[M]` moderate, `[A]` aggressive.
+
+### Keybindings
+
+<DocTable
+  headers={["Key", "Action"]}
+  rows={[
+    [<code>a</code>, "Create new agent"],
+    [<code>s</code>, "Start selected agent"],
+    [<code>f</code>, "Start all stopped agents"],
+    [<code>d</code>, "Delete selected agent"],
+    [<code>p</code>, "Stop selected agent"],
+    [<code>c</code>, "Stop all running agents"],
+    [<code>r</code>, "Refresh agent list"],
+    [<code>e</code>, "Edit selected agent"],
+    [<code>b</code>, "Open leaderboard"],
+    [<code>o</code>, "Toggle leaderboard opt-in for selected agent"],
+  ]}
+/>
+
+---
+
+## Create Agent Form
+
+5 form sections with all configuration options:
+
+<DocTable
+  headers={["Section", "Fields"]}
+  rows={[
+    [<strong>Identity</strong>, "Agent Name, Token Symbol"],
+    [<strong>Trading Config</strong>, "Amount (USDT), Leverage (1–125), Timeframe, Poll Interval (s), Risk Profile (Conservative / Moderate / Aggressive)"],
+    [<strong>TP / SL</strong>, "Mode (Fixed / Dynamic ATR), Take Profit %, Stop Loss %"],
+    [<strong>Execution + Supervisor</strong>, "Mode (Paper Trading / Live), Supervisor Interval (30–300s)"],
+    [<strong>API Keys</strong>, "Exchange API Key, Exchange Secret, LLM API Key, LLM Provider (OpenAI / Anthropic / Gemini / DeepSeek)"],
+  ]}
+/>
+
+Press **Launch** to create or `Escape` to cancel.
+
+---
+
+## Edit Agent
+
+8 editable fields — leave empty to skip:
+
+<DocTable
+  headers={["Field", "Type"]}
+  rows={[
+    ["Agent Name", "text"],
+    ["Amount (USDT)", "number"],
+    ["Leverage", "integer (1–125)"],
+    ["Risk Profile", "conservative / moderate / aggressive"],
+    ["Take Profit %", "number (empty for auto)"],
+    ["Stop Loss %", "number (empty for auto)"],
+    ["Supervisor Interval", "seconds"],
+    ["Poll Interval", "seconds"],
+  ]}
+/>
+
+<Callout type="warning" title="Live agent edits">
+TP/SL/amount changes apply immediately. Leverage and LLM changes trigger an agent restart.
+</Callout>
+
+Press **Save** to apply or `Escape` to cancel.
+
+---
+
+## Leaderboard
+
+Top 20 agents globally. Columns: Rank, Agent, Symbol, Owner, Strategy, Trades, PnL, Win%, Sharpe. Top 3 get medal labels.
+
+<DocTable
+  headers={["Key", "Action"]}
+  rows={[
+    [<code>Escape</code>, "Back to dashboard"],
+    [<code>r</code>, "Refresh rankings"],
+  ]}
+/>
+
+---
+
+## Log Viewer
+
+Real-time log streaming with filtering:
+
+<DocTable
+  headers={["Control", "Function"]}
+  rows={[
+    ["Agent select", "Choose which agent to tail"],
+    ["Level filter", "ALL, INFO, LLM, ERROR, TICK"],
+    ["Search", "Text filter on log messages"],
+    ["Auto-scroll", "Toggle to pin to latest entries"],
+  ]}
+/>
+
+### Log Level Categories
+
+<DocTable
+  headers={["Filter", "Includes"]}
+  rows={[
+    ["ALL", "Everything"],
+    ["INFO", "init, start, action, sl_tp, stop"],
+    ["LLM", "llm, supervisor"],
+    ["ERROR", "error, warn"],
+    ["TICK", "tick"],
+  ]}
+/>
+
+Logs are color-coded: errors red, warnings yellow, LLM/supervisor cyan, actions green, sl_tp magenta, ticks dim.
+
+Press `Escape` to return to dashboard.
+
+---
+
+## ASCII Lab
+
+Easter egg — 3D rotating `$` sign rendered in ASCII art with ray-marched lighting. Press `Escape` to go back.

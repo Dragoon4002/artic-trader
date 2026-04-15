@@ -1,0 +1,148 @@
+import { DocTable } from "@/components/docs/doc-table"
+
+# Deployment
+
+Artic runs as a Docker Compose stack with a hub service and dynamically spawned agent containers.
+
+## Docker Compose
+
+### Configuration
+
+The `docker-compose.yml` defines the hub service:
+
+```yaml
+services:
+  hub:
+    build: hub/
+    ports:
+      - "9000:9000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/artic
+      - INTERNAL_SECRET=artic-dev-secret
+      - JWT_SECRET=artic-jwt-dev-secret
+      - TWELVE_DATA_API_KEY=your-key  # optional
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - artic-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  artic-net:
+    driver: bridge
+```
+
+### Key Details
+
+- **Docker Socket Mount**: The hub needs access to Docker to spawn agent containers
+- **Network**: All containers share `artic-net` (bridge driver)
+- **Agent DNS**: Containers are addressable as `artic-agent-{container-id}:8000`
+- **Port Allocation**: Hub allocates ports atomically via thread-safe lock (`hub/docker/ports.py`)
+
+## Starting the Stack
+
+```bash
+# Start hub
+docker compose up -d
+
+# View logs
+docker compose logs -f hub
+
+# Stop everything
+docker compose down
+```
+
+## Database Setup
+
+### PostgreSQL
+
+Artic requires a PostgreSQL database. Options:
+
+**Option 1: External PostgreSQL**
+```
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/artic
+```
+
+**Option 2: Add PostgreSQL to docker-compose.yml**
+```yaml
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: artic
+      POSTGRES_USER: artic
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+### Migrations
+
+Database migrations are managed by Alembic:
+
+```bash
+cd hub
+alembic upgrade head
+```
+
+## Environment Variables
+
+### Required
+
+<DocTable
+  headers={["Variable", "Purpose"]}
+  rows={[
+    [<code>DATABASE_URL</code>, "PostgreSQL connection string"],
+    [<code>INTERNAL_SECRET</code>, "Agent→Hub push authentication"],
+    [<code>JWT_SECRET</code>, "JWT token signing key"],
+  ]}
+/>
+
+### Optional
+
+<DocTable
+  headers={["Variable", "Purpose"]}
+  rows={[
+    [<code>TWELVE_DATA_API_KEY</code>, "Candle data (rate-limited 8 req/min)"],
+    [<code>CMC_API_KEY</code>, "CoinMarketCap token metadata"],
+    [<code>OPENAI_API_KEY</code>, "OpenAI LLM provider"],
+    [<code>ANTHROPIC_API_KEY</code>, "Anthropic LLM provider"],
+    [<code>DEEPSEEK_API_KEY</code>, "DeepSeek LLM provider"],
+    [<code>GEMINI_API_KEY</code>, "Google Gemini LLM provider"],
+    [<code>HASHKEY_API_KEY</code>, "HashKey Global exchange"],
+    [<code>HASHKEY_SECRET</code>, "HashKey Global signing"],
+    [<code>HASHKEY_SANDBOX</code>, <><code>true</code> for sandbox mode</>],
+    [<code>HSK_RPC_URL</code>, "HashKey Chain RPC endpoint"],
+    [<code>HSK_PRIVATE_KEY</code>, "On-chain logger private key"],
+    [<code>TELEGRAM_BOT_TOKEN</code>, "Telegram bot client"],
+  ]}
+/>
+
+## Production Considerations
+
+### Security
+- Change `INTERNAL_SECRET` and `JWT_SECRET` to strong random values
+- Store all API keys in encrypted DB secrets, not `.env`
+- Use TLS termination (nginx/Caddy) in front of hub
+
+### Networking
+- Hub port 9000 should be behind a reverse proxy
+- Agent containers communicate internally on `artic-net`
+- Agent ports are internal-only (not exposed to host)
+
+### Monitoring
+- Hub health: `GET /health`
+- Agent health: Hub polls each container's `/health` endpoint
+- WebSocket for real-time client monitoring
+- Log entries persisted to PostgreSQL for historical analysis
+
+### Scaling
+- Each agent runs in its own Docker container
+- Hub manages container lifecycle and resource allocation
+- Agents are stateless (state in PostgreSQL) — can be restarted without data loss

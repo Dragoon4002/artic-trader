@@ -1,0 +1,169 @@
+import { DocTable } from "@/components/docs/doc-table"
+
+# Agent Configuration
+
+Each agent is configured at creation time via the Hub API. This page covers all configuration options.
+
+## Creating an Agent
+
+```bash
+POST /api/agents
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "symbol": "BTC/USDT",
+  "strategy_name": "momentum_breakout",
+  "interval_seconds": 1,
+  "live_mode": false,
+  "risk_params": {
+    "max_position_usd": 1000,
+    "stop_loss_pct": 2.0,
+    "take_profit_pct": 4.0,
+    "leverage": 1
+  }
+}
+```
+
+## Configuration Fields
+
+<DocTable
+  headers={["Field", "Type", "Required", "Description"]}
+  rows={[
+    [<code>symbol</code>, "string", "Yes", <>Trading pair (e.g., <code>BTC/USDT</code>, <code>ETH/USDT</code>)</>],
+    [<code>strategy_name</code>, "string", "Yes", <>Algorithm name from <a href="/docs/strategies">Strategy Catalog</a></>],
+    [<code>interval_seconds</code>, "int", "No", "Tick interval in seconds (default: 1)"],
+    [<code>live_mode</code>, "bool", "No", <><code>false</code> = paper trading, <code>true</code> = live execution</>],
+    [<code>risk_params</code>, "object", "No", "Risk management configuration (see below)"],
+  ]}
+/>
+
+## Risk Parameters
+
+The `risk_params` JSONB field controls position sizing and risk management:
+
+<DocTable
+  headers={["Parameter", "Type", "Description"]}
+  rows={[
+    [<code>max_position_usd</code>, "float", "Maximum position size in USD"],
+    [<code>stop_loss_pct</code>, "float", "Stop-loss percentage (e.g., 2.0 = 2%)"],
+    [<code>take_profit_pct</code>, "float", "Take-profit percentage (e.g., 4.0 = 4%)"],
+    [<code>leverage</code>, "int", "Leverage multiplier (1-125x)"],
+  ]}
+/>
+
+### Dynamic TP/SL
+
+When the LLM supervisor is enabled, it can dynamically adjust stop-loss and take-profit levels based on:
+- ATR-based stop-loss calculation
+- Automated risk:reward ratio
+- Market condition changes
+
+The supervisor runs on a configurable cycle (every N ticks on open positions).
+
+## LLM Configuration
+
+The LLM provider is configured via secrets (environment variables or encrypted DB storage):
+
+<DocTable
+  headers={["Secret Key", "Purpose"]}
+  rows={[
+    [<code>LLM_PROVIDER</code>, <>Provider name: <code>openai</code>, <code>anthropic</code>, <code>deepseek</code>, <code>gemini</code></>],
+    [<code>LLM_MODEL</code>, <>Model name (e.g., <code>gpt-4o</code>, <code>claude-3-opus</code>, <code>deepseek-chat</code>)</>],
+    [<code>OPENAI_API_KEY</code>, "OpenAI API key"],
+    [<code>ANTHROPIC_API_KEY</code>, "Anthropic API key"],
+    [<code>DEEPSEEK_API_KEY</code>, "DeepSeek API key"],
+    [<code>GEMINI_API_KEY</code>, "Google Gemini API key"],
+  ]}
+/>
+
+### LLM Planning Cycle
+
+1. Agent collects market data (candles, indicators, price history)
+2. LLM analyzes the data and selects the best strategy
+3. LLM defines lookback period, threshold, and max loss percentage
+4. Strategy runs on the selected parameters
+5. LLM reasoning is captured for audit trail
+
+## Execution Modes
+
+### Paper Trading (Default)
+- `live_mode: false`
+- Positions tracked in-memory
+- No real orders placed
+- Full P&L simulation
+
+### Live Trading
+- `live_mode: true`
+- Requires `HASHKEY_API_KEY` and `HASHKEY_SECRET`
+- Orders placed on HashKey Global exchange
+- Set `HASHKEY_SANDBOX: true` for sandbox testing
+
+## Per-Agent Secrets
+
+Override user-level secrets for specific agents:
+
+```bash
+POST /api/agents/{id}/secrets
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "key_name": "OPENAI_API_KEY",
+  "encrypted_value": "<AES-encrypted-value>"
+}
+```
+
+**Secret resolution order** (first match wins):
+1. Ephemeral override (per-request, never stored)
+2. Agent-specific override (encrypted in DB)
+3. User-level secret (encrypted in DB)
+4. Process `.env` fallback
+
+## Agent Lifecycle
+
+<DocTable
+  headers={["Status", "Description"]}
+  rows={[
+    [<code>creating</code>, "Docker container being provisioned"],
+    [<code>running</code>, "Trading loop active"],
+    [<code>stopped</code>, "Manually stopped, container preserved"],
+    [<code>error</code>, "Failed to start or crashed"],
+  ]}
+/>
+
+### Management Commands
+
+```bash
+# List all agents
+GET /api/agents
+
+# Get agent details
+GET /api/agents/{id}
+
+# Stop an agent
+POST /api/agents/{id}/stop
+
+# Delete an agent (removes container)
+DELETE /api/agents/{id}
+```
+
+## Log Levels
+
+Agent logs use structured levels for filtering:
+
+<DocTable
+  headers={["Level", "When"]}
+  rows={[
+    [<code>init</code>, "Agent startup and config loading"],
+    [<code>llm</code>, "LLM planning/supervisor calls"],
+    [<code>start</code>, "Trading loop started"],
+    [<code>tick</code>, "Each price tick processed"],
+    [<code>action</code>, "Position opened or closed"],
+    [<code>sl_tp</code>, "Stop-loss or take-profit triggered"],
+    [<code>stop</code>, "Agent stopped"],
+    [<code>error</code>, "Error occurred"],
+    [<code>warn</code>, "Warning condition"],
+    [<code>supervisor</code>, "LLM supervisor adjustment"],
+  ]}
+/>

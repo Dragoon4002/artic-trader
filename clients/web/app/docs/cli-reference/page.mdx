@@ -1,0 +1,112 @@
+import { Callout } from "@/components/docs/callout"
+import { DocTable } from "@/components/docs/doc-table"
+
+# CLI Reference
+
+Interactive menu-driven command-line interface for managing Artic trading agents.
+
+<Callout type="info" title="Session-based">
+The CLI saves your JWT token to <code>~/.artic/token</code>. Subsequent launches skip login until the token expires.
+</Callout>
+
+## Setup
+
+```bash
+cd clients/cli
+pip install -r requirements.txt
+python -m cli
+```
+
+## Authentication
+
+On first launch:
+
+<DocTable
+  headers={["Option", "Action"]}
+  rows={[
+    [<strong>1 — Login</strong>, "Authenticate with email + password"],
+    [<strong>2 — Register</strong>, "Create account and auto-login"],
+    [<strong>0 — Exit</strong>, "Quit"],
+  ]}
+/>
+
+Tokens persist in `~/.artic/token`. Option 0 clears the saved token.
+
+---
+
+## Main Menu
+
+<DocTable
+  headers={["#", "Command", "Description"]}
+  rows={[
+    ["1", <strong>List agents</strong>, "Table of all agents — name, symbol, status, LLM, ID"],
+    ["2", <strong>Create agent</strong>, "Interactive creation wizard (see fields below)"],
+    ["3", <strong>Start agent</strong>, "Pick a stopped agent and restart it"],
+    ["4", <strong>Stop agent</strong>, "Pick a running agent and halt it"],
+    ["5", <strong>Agent status</strong>, "Full status dump for selected agent"],
+    ["6", <strong>Agent logs</strong>, "Fetch recent log lines (configurable limit)"],
+    ["7", <strong>Delete agent</strong>, "Select agent, confirm, delete"],
+    ["8", <strong>Edit agent</strong>, "Modify agent config fields (see below)"],
+    ["9", <strong>Kill all</strong>, "Stop every running agent (requires confirmation)"],
+    ["10", <strong>Leaderboard</strong>, "Global agent rankings with sort and filter"],
+    ["0", <strong>Exit</strong>, "Logout and quit"],
+  ]}
+/>
+
+---
+
+## Create Agent Fields
+
+The wizard prompts for each field sequentially. Press Enter to accept defaults.
+
+<DocTable
+  headers={["Field", "Default", "Notes"]}
+  rows={[
+    ["Symbol", "required", <>e.g. <code>BTCUSDT</code></>],
+    ["Name", <code>{"{SYMBOL}"} Agent</code>, "Display name"],
+    ["Amount USDT", "100", "Trading capital"],
+    ["Leverage", "5", "1–125"],
+    ["Risk profile", "moderate", "1=aggressive, 2=moderate, 3=conservative"],
+    ["Timeframe", "15m", "1=1m, 2=5m, 3=15m, 4=30m, 5=1h, 6=4h, 7=1d"],
+    ["Take profit %", "skip", "Percentage number"],
+    ["Stop loss %", "skip", "Percentage number"],
+    ["Live mode", "no", "y/n — paper trading by default"],
+    ["LLM provider", "skip", "1=openai, 2=anthropic, 3=deepseek, 4=gemini"],
+    ["LLM API key", "—", "Hidden input, only prompted if provider selected"],
+    ["Auto-start", "yes", "y/n — launch immediately after creation"],
+  ]}
+/>
+
+---
+
+## Edit Agent Fields
+
+Select an agent, then modify any field. Press Enter to skip a field.
+
+<DocTable
+  headers={["Field", "Notes"]}
+  rows={[
+    ["Name", "New display name"],
+    ["Amount USDT", "Trading capital"],
+    ["Leverage", "1–125"],
+    ["Risk profile", "1=aggressive, 2=moderate, 3=conservative"],
+    ["TP %", "Converted to decimal internally"],
+    ["SL %", "Converted to decimal internally"],
+    ["LLM provider", "1=openai, 2=anthropic, 3=deepseek, 4=gemini"],
+  ]}
+/>
+
+---
+
+## Leaderboard
+
+<DocTable
+  headers={["Parameter", "Default", "Options"]}
+  rows={[
+    ["Limit", "10", "Any number"],
+    ["Sort by", <code>total_pnl</code>, <><code>total_pnl</code>, <code>win_rate</code>, <code>sharpe</code>, <code>trade_count</code></>],
+    ["Symbol filter", "skip", <>Any symbol (e.g. <code>BTCUSDT</code>) or skip</>],
+  ]}
+/>
+
+Columns: Rank, Agent, Symbol, Owner, Trades, PnL, Win%, Sharpe, Status.

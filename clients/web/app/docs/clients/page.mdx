@@ -1,0 +1,174 @@
+import { DocTable } from "@/components/docs/doc-table"
+
+# Client Guides
+
+Artic provides three client interfaces. All are thin presentation layers that communicate exclusively through the Hub SDK (`hub/client.py`).
+
+---
+
+## TUI (Terminal UI)
+
+The richest client experience. Built with the **Textual** framework.
+
+### Setup
+
+```bash
+cd clients/tui
+pip install textual
+python -m tui
+```
+
+### Screens
+
+The TUI has 5 screens:
+
+<DocTable
+  headers={["Screen", "Purpose"]}
+  rows={[
+    [<strong>Dashboard</strong>, "Agent overview, status cards, live P&L"],
+    [<strong>CreateAgent</strong>, "Agent creation form with all config options"],
+    [<strong>LogViewer</strong>, "Real-time log streaming with level filtering"],
+    [<strong>Theme</strong>, "Color theme customization"],
+    [<strong>AgentDetail</strong>, "Deep dive into a single agent's state, trades, and logs"],
+  ]}
+/>
+
+### Key Features
+
+- **Live polling**: Agent status refreshes every 2 seconds
+- **All hub calls through HubClient** — no raw HTTP in screen code
+- **Keyboard-first**: Full keyboard navigation and shortcuts
+
+---
+
+## CLI
+
+Command-line interface for scripting and automation. Built with **Typer**.
+
+### Setup
+
+```bash
+cd clients/cli
+pip install typer
+python -m cli
+```
+
+### Commands
+
+```bash
+# Authentication
+artic login --email user@example.com --password secret
+artic generate-key
+
+# Agent management
+artic agents list
+artic agents create --symbol BTC/USDT --strategy momentum_breakout
+artic agents stop <agent-id>
+artic agents delete <agent-id>
+
+# Monitoring
+artic agents status <agent-id>
+artic agents logs <agent-id>
+
+# Secrets
+artic secrets set OPENAI_API_KEY
+artic secrets list
+```
+
+### JSON Output
+
+Every command supports `--json` for machine-readable output:
+
+```bash
+artic agents list --json | jq '.[] | .symbol'
+```
+
+### Conventions
+
+- Every command has `--json` flag for scripting
+- No interactive prompts in non-TTY mode
+- All calls go through Hub SDK
+
+---
+
+## Telegram Bot
+
+Monitor and control agents from Telegram.
+
+### Setup
+
+1. Create a bot via [@BotFather](https://t.me/BotFather)
+2. Set `TELEGRAM_BOT_TOKEN` in your secrets
+3. Run the bot:
+
+```bash
+cd clients/telegram
+python -m telegram
+```
+
+### Commands
+
+<DocTable
+  headers={["Command", "Action"]}
+  rows={[
+    [<code>/start</code>, "Initialize bot and authenticate"],
+    [<code>/agents</code>, "List all your agents"],
+    [<><code>/status {'<'}id{'>'}</code></>, "Get agent status and P&L"],
+    [<><code>/stop {'<'}id{'>'}</code></>, "Stop an agent"],
+    [<><code>/logs {'<'}id{'>'}</code></>, "Recent log summary"],
+  ]}
+/>
+
+### Features
+
+- **Real-time notifications**: Trade events, P&L alerts
+- **Commands mirror Hub SDK 1:1**
+- **Summarized output** — never raw logs (Telegram-formatted)
+- **Bot token stored in USER_SECRETS** — never hardcoded
+
+---
+
+## REST API
+
+For building custom integrations. See [Hub API Reference](/docs/hub-api).
+
+### Quick Example
+
+```python
+import httpx
+
+HUB = "http://localhost:9000"
+
+# Login
+resp = httpx.post(f"{HUB}/auth/login", json={
+    "email": "trader@example.com",
+    "password": "secret"
+})
+token = resp.json()["access_token"]
+headers = {"Authorization": f"Bearer {token}"}
+
+# List agents
+agents = httpx.get(f"{HUB}/api/agents", headers=headers).json()
+
+# Create agent
+httpx.post(f"{HUB}/api/agents", headers=headers, json={
+    "symbol": "ETH/USDT",
+    "strategy_name": "rsi_signal",
+    "live_mode": False
+})
+```
+
+### WebSocket Streaming
+
+```python
+import websockets
+import asyncio
+
+async def stream():
+    uri = f"ws://localhost:9000/ws?token={token}"
+    async with websockets.connect(uri) as ws:
+        async for message in ws:
+            print(message)  # agent_status, trade, log events
+
+asyncio.run(stream())
+```

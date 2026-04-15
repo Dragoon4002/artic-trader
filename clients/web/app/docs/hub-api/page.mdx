@@ -1,0 +1,240 @@
+import { DocTable } from "@/components/docs/doc-table"
+
+# Hub API Reference
+
+The Hub exposes REST and WebSocket endpoints on port **9000**. All client communication goes through the hub.
+
+## Authentication
+
+All `/api/*` endpoints require authentication via one of:
+
+- **JWT**: `Authorization: Bearer <access_token>` (15 min lifetime)
+- **API Key**: `X-API-Key: <raw_key>` (permanent until regenerated)
+
+See [Authentication](/docs/authentication) for details.
+
+---
+
+## Auth Endpoints
+
+### Login
+
+```
+POST /auth/login
+Content-Type: application/json
+
+{ "email": "user@example.com", "password": "secret" }
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "...",
+  "token_type": "bearer"
+}
+```
+
+### Refresh Token
+
+```
+POST /auth/refresh
+Content-Type: application/json
+
+{ "refresh_token": "..." }
+```
+
+### Generate API Key
+
+```
+POST /api/keys
+Authorization: Bearer <token>
+```
+
+**Response:** Returns raw API key once. Hub stores SHA-256 hash only.
+
+---
+
+## Agent Endpoints
+
+### List Agents
+
+```
+GET /api/agents
+Authorization: Bearer <token>
+```
+
+Returns all agents owned by the authenticated user.
+
+### Create Agent
+
+```
+POST /api/agents
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "symbol": "BTC/USDT",
+  "strategy_name": "momentum_breakout",
+  "interval_seconds": 1,
+  "live_mode": false,
+  "risk_params": { ... }
+}
+```
+
+### Get Agent
+
+```
+GET /api/agents/{id}
+Authorization: Bearer <token>
+```
+
+### Stop Agent
+
+```
+POST /api/agents/{id}/stop
+Authorization: Bearer <token>
+```
+
+### Delete Agent
+
+```
+DELETE /api/agents/{id}
+Authorization: Bearer <token>
+```
+
+Stops the container and removes the agent record.
+
+---
+
+## Market Data
+
+### Get Candles
+
+```
+GET /api/market/candles?symbol=BTC/USDT&timeframe=1h
+Authorization: Bearer <token>
+```
+
+Returns cached OHLCV candle data. Hub manages TwelveData rate budget (8 req/min). Cache staleness tolerance: **60 seconds**.
+
+---
+
+## Secrets Management
+
+### Store User Secret
+
+```
+POST /api/secrets
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "key_name": "OPENAI_API_KEY",
+  "encrypted_value": "<AES-encrypted>"
+}
+```
+
+### List User Secrets
+
+```
+GET /api/secrets
+Authorization: Bearer <token>
+```
+
+Returns key names only (never values).
+
+### Store Agent Secret Override
+
+```
+POST /api/agents/{id}/secrets
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "key_name": "ANTHROPIC_API_KEY",
+  "encrypted_value": "<AES-encrypted>"
+}
+```
+
+---
+
+## WebSocket
+
+### Connect
+
+```
+ws://localhost:9000/ws?token=YOUR_ACCESS_TOKEN
+```
+
+### Message Types
+
+The WebSocket broadcasts real-time updates:
+
+<DocTable
+  headers={["Type", "Content"]}
+  rows={[
+    [<code>agent_status</code>, "Agent state, position, P&L (every tick)"],
+    [<code>trade</code>, "Position opened or closed"],
+    [<code>log</code>, "Agent log entries (batched every 10 ticks)"],
+  ]}
+/>
+
+---
+
+## Internal Endpoints
+
+These are agent→hub push endpoints, authenticated via `X-Internal-Secret` header.
+
+<DocTable
+  headers={["Method", "Path", "Purpose", "Frequency"]}
+  rows={[
+    ["POST", <code>/internal/agents/{"{id}"}/status</code>, "Agent status update", "Every tick"],
+    ["POST", <code>/internal/trades</code>, "Trade event", "On open/close"],
+    ["POST", <code>/internal/logs</code>, "Log batch", "Every 10 ticks"],
+  ]}
+/>
+
+Clients never call these endpoints directly.
+
+---
+
+## Agent Container Endpoints
+
+These run inside each agent container on port 8000. Only the hub calls them.
+
+<DocTable
+  headers={["Method", "Path", "Purpose"]}
+  rows={[
+    ["GET", <code>/health</code>, "Container health check"],
+    ["POST", <code>/start</code>, "Start trading loop"],
+    ["POST", <code>/stop</code>, "Stop trading loop"],
+    ["GET", <code>/status</code>, "Current engine state + position"],
+    ["GET", <code>/logs</code>, "Recent log entries"],
+    ["POST", <code>/plan</code>, "Trigger LLM planning cycle"],
+  ]}
+/>
+
+---
+
+## Port Map
+
+<DocTable
+  headers={["Service", "Port", "Access"]}
+  rows={[
+    ["Hub", "9000", "Client-facing"],
+    ["Agent containers", "8000", <>Internal (Docker DNS: <code>artic-agent-{"{id}"}:8000</code>)</>],
+  ]}
+/>
+
+## Rate Limits
+
+<DocTable
+  headers={["Service", "Limit", "Managed By"]}
+  rows={[
+    ["TwelveData", "8 req/min", "Hub (APScheduler)"],
+    ["Pyth Hermes", "None", "Direct agent access"],
+    ["JWT access tokens", "15 min expiry", "Hub auth"],
+    ["Market cache", "60s staleness", "Hub cache service"],
+  ]}
+/>

@@ -1,0 +1,28 @@
+# App deps
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+pydantic-settings
+openai
+anthropic
+requests
+python-dotenv
+apscheduler
+
+# Hub deps
+sqlalchemy[asyncio]
+asyncpg
+alembic
+PyJWT
+passlib[bcrypt]
+docker
+websockets
+
+# Client deps
+python-telegram-bot>=20.0
+textual
+
+# On-chain deps
+web3
+py-solc-x

@@ -1,0 +1,417 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0f; color: #e8e6f0; font-family: 'Inter', system-ui, sans-serif; overflow-x: hidden; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px;
+    border-bottom: 0.5px solid rgba(255,255,255,0.08);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(12px);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; letter-spacing: -0.3px; color: #fff; }
+  .logo-mark {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #7F77DD, #534AB7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .nav-links { display: flex; gap: 32px; align-items: center; }
+  .nav-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+  .nav-links a:hover { color: #fff; }
+  .nav-cta {
+    padding: 9px 20px; border-radius: 8px;
+    background: #534AB7; color: #fff; font-size: 14px; font-weight: 500;
+    text-decoration: none; transition: background 0.2s;
+  }
+  .nav-cta:hover { background: #6b63d4; }
+
+  /* HERO */
+  .hero {
+    min-height: 88vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 80px 24px 60px;
+    position: relative; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(83,74,183,0.25) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 20% 80%, rgba(29,158,117,0.12) 0%, transparent 60%),
+      #0a0a0f;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px;
+    border: 0.5px solid rgba(127,119,221,0.5);
+    background: rgba(83,74,183,0.15);
+    font-size: 12px; color: #AFA9EC; margin-bottom: 28px;
+    position: relative; z-index: 1;
+  }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #7F77DD; }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 80px); font-weight: 700;
+    letter-spacing: -2px; line-height: 1.05;
+    color: #fff; max-width: 820px;
+    position: relative; z-index: 1; margin-bottom: 24px;
+  }
+  .hero h1 span { color: #7F77DD; }
+  .hero p {
+    font-size: 18px; color: rgba(255,255,255,0.55);
+    max-width: 540px; line-height: 1.7;
+    position: relative; z-index: 1; margin-bottom: 40px;
+  }
+  .hero-actions { display: flex; gap: 12px; align-items: center; position: relative; z-index: 1; }
+  .btn-primary {
+    padding: 13px 28px; border-radius: 10px;
+    background: #534AB7; color: #fff; font-size: 15px; font-weight: 500;
+    text-decoration: none; transition: background 0.2s, transform 0.15s;
+  }
+  .btn-primary:hover { background: #6b63d4; transform: translateY(-1px); }
+  .btn-secondary {
+    padding: 13px 28px; border-radius: 10px;
+    border: 0.5px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.7); font-size: 15px; font-weight: 500;
+    text-decoration: none; transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+
+  /* HERO VISUAL */
+  .hero-visual {
+    margin-top: 64px; position: relative; z-index: 1;
+    width: 100%; max-width: 900px;
+    border: 0.5px solid rgba(255,255,255,0.1);
+    border-radius: 16px; overflow: hidden;
+    background: rgba(255,255,255,0.03);
+  }
+  .terminal-bar {
+    background: rgba(255,255,255,0.05); padding: 10px 16px;
+    display: flex; align-items: center; gap: 6px;
+    border-bottom: 0.5px solid rgba(255,255,255,0.08);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #ffbd2e; }
+  .dot-g { background: #28c840; }
+  .terminal-body { padding: 24px 28px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 2; color: rgba(255,255,255,0.7); }
+  .t-cmd { color: #7F77DD; }
+  .t-ok { color: #1D9E75; }
+  .t-dim { color: rgba(255,255,255,0.35); }
+  .t-val { color: #AFA9EC; }
+
+  /* SECTION BASE */
+  section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
+  .section-label {
+    font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #7F77DD; margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: clamp(28px, 4vw, 44px); font-weight: 700;
+    letter-spacing: -1px; color: #fff; margin-bottom: 16px;
+  }
+  .section-sub { font-size: 17px; color: rgba(255,255,255,0.5); max-width: 520px; line-height: 1.7; }
+
+  /* FEATURES GRID */
+  .features-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px; margin-top: 56px;
+  }
+  .feature-card {
+    padding: 28px; border-radius: 14px;
+    border: 0.5px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .feature-card:hover { border-color: rgba(127,119,221,0.4); background: rgba(83,74,183,0.06); }
+  .feature-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px; font-size: 18px;
+  }
+  .icon-purple { background: rgba(83,74,183,0.2); }
+  .icon-teal   { background: rgba(29,158,117,0.2); }
+  .icon-coral  { background: rgba(216,90,48,0.2); }
+  .icon-blue   { background: rgba(55,138,221,0.2); }
+  .feature-card h3 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+  .feature-card p  { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+
+  /* TICKER */
+  .ticker-wrap {
+    overflow: hidden; padding: 32px 0;
+    border-top: 0.5px solid rgba(255,255,255,0.06);
+    border-bottom: 0.5px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.015);
+  }
+  .ticker-track {
+    display: flex; gap: 60px; align-items: center;
+    animation: ticker 22s linear infinite; width: max-content;
+  }
+  .ticker-item { font-size: 13px; color: rgba(255,255,255,0.3); white-space: nowrap; font-weight: 500; }
+  .ticker-item strong { color: rgba(255,255,255,0.7); }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* HOW IT WORKS */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 56px; }
+  .step { position: relative; }
+  .step-num {
+    font-size: 12px; font-weight: 600; color: #534AB7;
+    background: rgba(83,74,183,0.15);
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+  }
+  .step-connector {
+    position: absolute; top: 14px; left: 34px; right: -12px;
+    height: 0.5px; background: rgba(83,74,183,0.3);
+  }
+  .step:last-child .step-connector { display: none; }
+  .step h3 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+  .step p  { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+
+  /* CLIENTS SECTION */
+  .clients-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 56px; }
+  .client-card {
+    padding: 28px; border-radius: 14px;
+    border: 0.5px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.025);
+  }
+  .client-tag {
+    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .tag-purple { background: rgba(83,74,183,0.2); color: #AFA9EC; }
+  .tag-teal   { background: rgba(29,158,117,0.2); color: #5DCAA5; }
+  .tag-coral  { background: rgba(216,90,48,0.2); color: #F0997B; }
+  .tag-blue   { background: rgba(55,138,221,0.2); color: #85B7EB; }
+  .client-card h3 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+  .client-card p  { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+
+  /* CTA BANNER */
+  .cta-banner {
+    margin: 0 48px 100px;
+    padding: 60px 48px;
+    border-radius: 20px;
+    background: rgba(83,74,183,0.12);
+    border: 0.5px solid rgba(127,119,221,0.25);
+    text-align: center;
+  }
+  .cta-banner h2 { font-size: clamp(24px, 4vw, 40px); font-weight: 700; color: #fff; margin-bottom: 16px; letter-spacing: -0.8px; }
+  .cta-banner p  { font-size: 17px; color: rgba(255,255,255,0.5); margin-bottom: 36px; }
+  .cta-actions { display: flex; gap: 12px; justify-content: center; }
+
+  /* FOOTER */
+  footer {
+    border-top: 0.5px solid rgba(255,255,255,0.08);
+    padding: 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 20px;
+  }
+  .footer-logo { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 14px; }
+  .footer-links { display: flex; gap: 28px; }
+  .footer-links a { color: rgba(255,255,255,0.4); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+  .footer-links a:hover { color: rgba(255,255,255,0.8); }
+  .footer-copy { color: rgba(255,255,255,0.25); font-size: 12px; }
+</style>
+
+<div style="background:#0a0a0f; min-height:100vh;">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="logo-mark">Æ</div>
+    Aegis
+  </div>
+  <div class="nav-links">
+    <a href="#">Features</a>
+    <a href="#">Docs</a>
+    <a href="#">Strategies</a>
+    <a href="#">GitHub</a>
+    <a href="#" class="nav-cta">Launch App →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-badge"><div class="badge-dot"></div> Now in early access</div>
+  <h1>Deploy AI trading agents.<br><span>Any market. Any scale.</span></h1>
+  <p>Aegis is the orchestration hub for AI-powered trading. Launch agents on perps, arb, and prediction markets — manage everything from one place.</p>
+  <div class="hero-actions">
+    <a href="#" class="btn-primary">Get early access</a>
+    <a href="#" class="btn-secondary">Read the docs</a>
+  </div>
+
+  <div class="hero-visual">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span style="font-size:12px; color:rgba(255,255,255,0.3); margin-left:8px;">aegis-hub — terminal</span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-dim">$</span> <span class="t-cmd">aegis agent launch</span> <span class="t-val">--token BTC/USDT --strategy momentum --llm claude-3</span></div>
+      <div><span class="t-ok">✓</span> Agent <span class="t-val">btc-001</span> initialized — studying 72h market data…</div>
+      <div><span class="t-ok">✓</span> Strategy selected: <span class="t-val">momentum_breakout_v2</span> (confidence: 87%)</div>
+      <div><span class="t-ok">✓</span> Agent live on <span class="t-val">Hyperliquid perp</span> — position size $2,400</div>
+      <div><span class="t-dim">  monitoring via dashboard / telegram / cli</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker">
+    <span class="ticker-item"><strong>Hyperliquid</strong> perps</span>
+    <span class="ticker-item"><strong>dYdX</strong> perpetuals</span>
+    <span class="ticker-item"><strong>Polymarket</strong> prediction</span>
+    <span class="ticker-item"><strong>Arbitrum</strong> arb</span>
+    <span class="ticker-item"><strong>Base</strong> arb</span>
+    <span class="ticker-item"><strong>Claude</strong> LLM</span>
+    <span class="ticker-item"><strong>GPT-4o</strong> LLM</span>
+    <span class="ticker-item"><strong>DeepSeek</strong> LLM</span>
+    <span class="ticker-item"><strong>Pyth</strong> price feeds</span>
+    <span class="ticker-item"><strong>CoinMarketCap</strong> data</span>
+    <span class="ticker-item"><strong>MongoDB</strong> storage</span>
+    <span class="ticker-item"><strong>Docker</strong> containers</span>
+    <!-- dupe for infinite scroll -->
+    <span class="ticker-item"><strong>Hyperliquid</strong> perps</span>
+    <span class="ticker-item"><strong>dYdX</strong> perpetuals</span>
+    <span class="ticker-item"><strong>Polymarket</strong> prediction</span>
+    <span class="ticker-item"><strong>Arbitrum</strong> arb</span>
+    <span class="ticker-item"><strong>Base</strong> arb</span>
+    <span class="ticker-item"><strong>Claude</strong> LLM</span>
+    <span class="ticker-item"><strong>GPT-4o</strong> LLM</span>
+    <span class="ticker-item"><strong>DeepSeek</strong> LLM</span>
+    <span class="ticker-item"><strong>Pyth</strong> price feeds</span>
+    <span class="ticker-item"><strong>CoinMarketCap</strong> data</span>
+    <span class="ticker-item"><strong>MongoDB</strong> storage</span>
+    <span class="ticker-item"><strong>Docker</strong> containers</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section>
+  <div class="section-label">Core features</div>
+  <h2 class="section-title">Everything an AI trader needs.</h2>
+  <p class="section-sub">From strategy selection to live execution — Aegis handles the full lifecycle of every agent.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon icon-purple">⚡</div>
+      <h3>Multi-agent orchestration</h3>
+      <p>Launch dozens of agents simultaneously — locally or on remote VMs. Each agent runs isolated with its own config, strategy, and position.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon icon-teal">🧠</div>
+      <h3>LLM strategy engine</h3>
+      <p>Agents study historical market data and let your chosen LLM select or generate the optimal strategy. Re-evaluates on your schedule.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon icon-coral">📊</div>
+      <h3>Pre-built strategy library</h3>
+      <p>Start immediately with momentum, mean reversion, funding rate arb, statistical arb, and volatility strategies — all battle-tested.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon icon-blue">🔒</div>
+      <h3>Risk-first architecture</h3>
+      <p>Per-agent position limits, drawdown stops, and kill switches. The hub maintains authority — no agent can exceed its mandate.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon icon-purple">🌐</div>
+      <h3>Multi-market support</h3>
+      <p>Trade perpetuals on Hyperliquid and dYdX, exploit arb across chains, or play prediction markets on Polymarket — all from one hub.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon icon-teal">📡</div>
+      <h3>Real-time monitoring</h3>
+      <p>Live P&L, position snapshots, trade logs, and LLM reasoning — streamed to your dashboard, Telegram bot, or CLI in real time.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="padding-top:0;">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Configure. Deploy. Profit.</h2>
+  <p class="section-sub">Three steps from intent to live trading agent.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-connector"></div>
+      <div class="step-num">1</div>
+      <h3>Configure your agent</h3>
+      <p>Set your token pair, market type, LLM provider, risk limits, and any custom strategy overrides. Takes under two minutes.</p>
+    </div>
+    <div class="step">
+      <div class="step-connector"></div>
+      <div class="step-num">2</div>
+      <h3>Deploy anywhere</h3>
+      <p>Launch the agent locally or push it to a remote VM. Aegis hub tracks it, maintains heartbeats, and persists all state to the DB.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Monitor & iterate</h3>
+      <p>Watch trades in real time. Agents auto-rebalance on your schedule. Pause, reconfigure, or scale any agent with a single command.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CLIENTS -->
+<section style="padding-top:0;">
+  <div class="section-label">Access your agents everywhere</div>
+  <h2 class="section-title">Your interface. Your choice.</h2>
+  <p class="section-sub">Aegis meets you where you are — terminal, browser, or Telegram.</p>
+
+  <div class="clients-grid">
+    <div class="client-card">
+      <div class="client-tag tag-purple">Web dashboard</div>
+      <h3>Full-featured browser UI</h3>
+      <p>Visual P&L charts, agent status cards, strategy inspector, and one-click deploy. Built for power users who want the full picture.</p>
+    </div>
+    <div class="client-card">
+      <div class="client-tag tag-teal">CLI & TUI</div>
+      <h3>Terminal-native control</h3>
+      <p>Launch, inspect, and manage agents from your terminal. Full rich TUI with live log streaming and keyboard shortcuts.</p>
+    </div>
+    <div class="client-card">
+      <div class="client-tag tag-coral">Telegram bot</div>
+      <h3>Alerts & commands on the go</h3>
+      <p>Get trade notifications, P&L snapshots, and stop any agent — all via Telegram. No laptop required.</p>
+    </div>
+    <div class="client-card">
+      <div class="client-tag tag-blue">REST API</div>
+      <h3>Build on top of Aegis</h3>
+      <p>Full REST + WebSocket API. Integrate Aegis into your own tooling, scripts, or custom dashboards with zero friction.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<div class="cta-banner">
+  <h2>Start trading with intelligence.</h2>
+  <p>Join the early access waitlist or self-host from GitHub today.</p>
+  <div class="cta-actions">
+    <a href="#" class="btn-primary">Get early access</a>
+    <a href="#" class="btn-secondary">View on GitHub</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <div class="logo-mark" style="width:24px;height:24px;font-size:11px;border-radius:6px;background:linear-gradient(135deg,#7F77DD,#534AB7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">Æ</div>
+    Aegis
+  </div>
+  <div class="footer-links">
+    <a href="#">Docs</a>
+    <a href="#">GitHub</a>
+    <a href="#">Telegram</a>
+    <a href="#">Twitter / X</a>
+    <a href="#">Discord</a>
+  </div>
+  <div class="footer-copy">© 2025 Aegis. All rights reserved.</div>
+</footer>
+
+</div>

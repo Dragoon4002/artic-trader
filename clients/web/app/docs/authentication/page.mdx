@@ -1,0 +1,130 @@
+import { DocTable } from "@/components/docs/doc-table"
+
+# Authentication & Secrets
+
+Artic uses a layered authentication system with encrypted secret management.
+
+## Authentication Methods
+
+### JWT Authentication (TUI, Web)
+
+Used for interactive sessions with short-lived tokens.
+
+```
+POST /auth/login
+{ "email": "user@example.com", "password": "secret" }
+
+→ { "access_token": "eyJ...", "refresh_token": "..." }
+```
+
+<DocTable
+  headers={["Token", "Lifetime", "Storage", "Revocation"]}
+  rows={[
+    ["Access (JWT)", "15 minutes", "Client memory", "Expires naturally"],
+    ["Refresh", "Long-lived", "Server-side", "Server-side revocable"],
+  ]}
+/>
+
+**Usage**: Include `Authorization: Bearer <access_token>` on all `/api/*` requests.
+
+**Refresh**: When the access token expires, use `POST /auth/refresh` with the refresh token.
+
+### API Key Authentication (CLI, Telegram)
+
+Used for long-lived, non-interactive access.
+
+```
+POST /api/keys
+Authorization: Bearer <token>
+
+→ { "api_key": "ak_..." }
+```
+
+- Hub stores **SHA-256 hash** of the key in `users.api_key_hash`
+- Raw key is returned **once** — store it securely
+- Client includes `X-API-Key: <raw_key>` header
+
+### Internal Authentication (Agent → Hub)
+
+Agent containers push data to hub via `/internal/*` endpoints:
+
+- `X-Internal-Secret` header must match hub's `INTERNAL_SECRET` env var
+- Secret is injected as Docker env var at container spawn time
+- Clients never use this authentication method
+
+---
+
+## Secret Management
+
+### Encrypted Storage
+
+API keys and sensitive credentials are stored encrypted in PostgreSQL:
+
+- **Encryption**: AES with key derived from user password/passphrase
+- **Storage**: `user_secrets` and `agent_secret_overrides` tables
+- **Values stored**: Only AES ciphertext — never plaintext
+
+### Secret Resolution Order
+
+When an agent needs a secret, it resolves in this order (first match wins):
+
+1. **Ephemeral override** — per-request, never stored (highest priority)
+2. **Agent secret override** — per-agent, encrypted in `agent_secret_overrides`
+3. **User secret** — user-level, encrypted in `user_secrets`
+4. **Process `.env`** — hub host environment (lowest priority)
+
+### Storing Secrets
+
+**User-level secret:**
+```
+POST /api/secrets
+Authorization: Bearer <token>
+{ "key_name": "OPENAI_API_KEY", "encrypted_value": "<AES-ciphertext>" }
+```
+
+**Agent-specific override:**
+```
+POST /api/agents/{id}/secrets
+Authorization: Bearer <token>
+{ "key_name": "ANTHROPIC_API_KEY", "encrypted_value": "<AES-ciphertext>" }
+```
+
+**Listing secrets:**
+```
+GET /api/secrets
+Authorization: Bearer <token>
+```
+Returns key names only — never values.
+
+### Known Secret Keys
+
+<DocTable
+  headers={["Key", "Used By", "Purpose"]}
+  rows={[
+    [<code>TWELVE_DATA_API_KEY</code>, "Hub market cache", "Candle data"],
+    [<code>OPENAI_API_KEY</code>, "App LLM planner", "OpenAI LLM"],
+    [<code>ANTHROPIC_API_KEY</code>, "App LLM planner", "Anthropic LLM"],
+    [<code>DEEPSEEK_API_KEY</code>, "App LLM planner", "DeepSeek LLM"],
+    [<code>GEMINI_API_KEY</code>, "App LLM planner", "Google Gemini"],
+    [<code>CMC_API_KEY</code>, "App market client", "CoinMarketCap metadata"],
+    [<code>LLM_PROVIDER</code>, "App LLM planner", "Provider selector"],
+    [<code>LLM_MODEL</code>, "App LLM planner", "Model name"],
+    [<code>HASHKEY_API_KEY</code>, "App executor", "Exchange API key"],
+    [<code>HASHKEY_SECRET</code>, "App executor", "Exchange signing secret"],
+    [<code>HASHKEY_SANDBOX</code>, "App executor", <><code>true</code> for sandbox mode</>],
+    [<code>HSK_RPC_URL</code>, "App on-chain logger", "HashKey Chain RPC"],
+    [<code>HSK_PRIVATE_KEY</code>, "App on-chain logger", "Contract caller key"],
+    [<code>INTERNAL_SECRET</code>, "Hub + App", "Agent→hub push auth"],
+  ]}
+/>
+
+---
+
+## Security Rules
+
+1. **API keys never stored in plaintext** — AES encryption mandatory
+2. **Never log secret values** — mask in all output
+3. **Agents receive secrets as Docker env vars** at spawn time
+4. **SHA-256 hashing** for API key comparison (constant-time)
+5. **Bcrypt** for password hashing
+6. **All agent queries scoped by `user_id`** — multi-tenant isolation

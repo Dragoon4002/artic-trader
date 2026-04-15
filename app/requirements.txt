@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+pydantic-settings
+python-dotenv
+openai
+anthropic
+requests
+apscheduler
+web3
+pymongo

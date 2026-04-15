@@ -1,0 +1,148 @@
+import { Callout } from "@/components/docs/callout"
+import { DocTable } from "@/components/docs/doc-table"
+
+# Telegram Reference
+
+Control and monitor your Artic agents from Telegram.
+
+## Setup
+
+1. Create a bot via [@BotFather](https://t.me/BotFather)
+2. Set `TELEGRAM_BOT_TOKEN` in your environment
+3. Run the bot:
+
+```bash
+cd clients/telegram
+pip install -r requirements.txt
+python -m telegram
+```
+
+<Callout type="info" title="Per-chat sessions">
+Login state is tied to your Telegram chat ID. Each chat maintains its own authenticated session.
+</Callout>
+
+---
+
+## Authentication
+
+<DocTable
+  headers={["Command", "Usage", "Description"]}
+  rows={[
+    [<code>/start</code>, <code>/start</code>, "Show welcome message and command list"],
+    [<code>/register</code>, <><code>/register</code> {'<'}email{'>'} {'<'}password{'>'}</>, "Create account and auto-login"],
+    [<code>/login</code>, <><code>/login</code> {'<'}email{'>'} {'<'}password{'>'}</>, "Authenticate existing account"],
+  ]}
+/>
+
+---
+
+## Agent Management
+
+<DocTable
+  headers={["Command", "Usage", "Description"]}
+  rows={[
+    [<code>/agents</code>, <code>/agents</code>, "List all agents with status and live PnL"],
+    [<code>/agent</code>, <><code>/agent</code> {'<'}id{'>'}</>, "Full details — config + live status if running"],
+    [<code>/status</code>, <><code>/status</code> {'<'}id{'>'}</>, "Live snapshot: side, price, entry, PnL, strategy, action"],
+    [<code>/create</code>, <><code>/create</code> {'<'}symbol{'>'} [amount] [leverage] [risk]</>, "Create and launch agent"],
+    [<code>/startbot</code>, <><code>/startbot</code> {'<'}id{'>'}</>, "Restart a stopped agent"],
+    [<code>/stopbot</code>, <><code>/stopbot</code> {'<'}id{'>'}</>, "Stop a running agent"],
+    [<code>/logs</code>, <><code>/logs</code> {'<'}id{'>'}</>, "Last 15 log entries with level icons"],
+    [<code>/symbols</code>, <code>/symbols</code>, "List all supported trading pairs"],
+  ]}
+/>
+
+---
+
+## Create Agent
+
+```
+/create <symbol> [amount] [leverage] [risk]
+```
+
+<DocTable
+  headers={["Parameter", "Default", "Constraints"]}
+  rows={[
+    ["Symbol", "required", <>Ticker (<code>BTC</code>) or pair (<code>BTCUSDT</code>). See <code>/symbols</code></>],
+    ["Amount", "100", "USDT, must be greater than 0"],
+    ["Leverage", "5", "1–125"],
+    ["Risk", "moderate", <><code>conservative</code>, <code>moderate</code>, <code>aggressive</code></>],
+  ]}
+/>
+
+Examples:
+
+```
+/create BTC
+/create ETH 200
+/create SOL 500 10 aggressive
+```
+
+---
+
+## Edit Agent
+
+```
+/edit <agent_id> <field> <value>
+```
+
+<DocTable
+  headers={["Field", "Maps to", "Type", "Example"]}
+  rows={[
+    [<code>amount</code>, <code>amount_usdt</code>, "number", <code>/edit abc1 amount 500</code>],
+    [<code>leverage</code>, <code>leverage</code>, "integer", <code>/edit abc1 leverage 10</code>],
+    [<code>tp</code>, <code>tp_pct</code>, "decimal", <><code>/edit abc1 tp 0.05</code> (= 5%)</>],
+    [<code>sl</code>, <code>sl_pct</code>, "decimal", <><code>/edit abc1 sl 0.02</code> (= 2%)</>],
+    [<code>risk</code>, <code>risk_profile</code>, "string", <code>/edit abc1 risk aggressive</code>],
+    [<code>supervisor</code>, <code>supervisor_interval</code>, "number", <><code>/edit abc1 supervisor 120</code> (seconds)</>],
+    [<code>poll</code>, <code>poll_seconds</code>, "number", <code>/edit abc1 poll 2</code>],
+    [<code>llm</code>, <code>llm_provider</code>, "string", <code>/edit abc1 llm anthropic</code>],
+    [<code>name</code>, <code>name</code>, "string", <code>/edit abc1 name "My Bot"</code>],
+  ]}
+/>
+
+---
+
+## Leaderboard
+
+<DocTable
+  headers={["Command", "Usage", "Description"]}
+  rows={[
+    [<code>/leaderboard</code>, <code>/leaderboard</code>, "Top 5 agents globally"],
+    [<code>/optin</code>, <><code>/optin</code> {'<'}id{'>'} [handle]</>, "Join leaderboard with optional display name"],
+    [<code>/optout</code>, <><code>/optout</code> {'<'}id{'>'}</>, "Remove agent from leaderboard"],
+  ]}
+/>
+
+---
+
+## Agent ID Prefix Matching
+
+You don't need the full UUID — any unique prefix of 4+ characters works:
+
+```
+/status abc1        matches abc1a2b3-...
+/stopbot 9f3e       matches 9f3e7d88-...
+```
+
+If the prefix matches multiple agents, the bot lists them so you can be more specific.
+
+---
+
+## Log Level Icons
+
+<DocTable
+  headers={["Icon", "Level"]}
+  rows={[
+    ["🎯", "action"],
+    ["🚨", "sl_tp"],
+    ["👨‍💻", "supervisor"],
+    ["🤖", "llm"],
+    ["❌", "error"],
+    ["⚠️", "warn"],
+    ["🚀", "init"],
+    ["▶️", "start"],
+    ["⏹️", "stop"],
+    ["📉", "tick"],
+  ]}
+/>

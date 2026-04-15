@@ -1,0 +1,543 @@
+
+<h2 class="sr-only">Artic vs competition: win checklist for HashKey AI track</h2>
+
+<style>
+  :root { --gap: 14px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); color: var(--color-text-primary); }
+
+  .section { margin-bottom: 2rem; }
+  .section-title {
+    font-size: 13px; font-weight: 500; letter-spacing: 0.04em;
+    color: var(--color-text-secondary); text-transform: uppercase;
+    margin-bottom: 10px; padding-bottom: 6px;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .rival-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+  .rival-card {
+    background: var(--color-background-secondary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .rival-card:hover { border-color: var(--color-border-secondary); }
+  .rival-card.danger { border-left: 3px solid #E24B4A; }
+  .rival-card.medium { border-left: 3px solid #EF9F27; }
+  .rival-card.low    { border-left: 3px solid #639922; }
+  .rival-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .rival-tag  { font-size: 11px; color: var(--color-text-secondary); }
+  .rival-gap  { font-size: 11px; margin-top: 5px; color: var(--color-text-tertiary); }
+
+  .checklist { list-style: none; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 14px;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-tertiary);
+    margin-bottom: 6px;
+    background: var(--color-background-primary);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .checklist li:hover { background: var(--color-background-secondary); }
+  .checklist li.done { opacity: 0.55; }
+  .checklist li.done .check-box { background: #639922; border-color: #639922; color: white; }
+  .checklist li.done .item-text { text-decoration: line-through; color: var(--color-text-tertiary); }
+
+  .check-box {
+    width: 18px; height: 18px; min-width: 18px;
+    border-radius: 4px;
+    border: 1.5px solid var(--color-border-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500;
+    color: transparent;
+    margin-top: 1px;
+  }
+  .item-text { font-size: 14px; line-height: 1.5; flex: 1; }
+  .item-why  { font-size: 12px; color: var(--color-text-secondary); margin-top: 3px; }
+
+  .priority-badge {
+    font-size: 10px; font-weight: 500; padding: 2px 7px;
+    border-radius: 10px; white-space: nowrap; align-self: flex-start; margin-top: 2px;
+  }
+  .p-critical { background: #FCEBEB; color: #A32D2D; }
+  .p-high     { background: #FAEEDA; color: #854F0B; }
+  .p-medium   { background: #EAF3DE; color: #3B6D11; }
+
+  .score-bar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .score-label { font-size: 13px; min-width: 160px; color: var(--color-text-secondary); }
+  .score-track {
+    flex: 1; height: 6px; background: var(--color-background-secondary);
+    border-radius: 3px; overflow: hidden;
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .score-num { font-size: 12px; font-weight: 500; min-width: 32px; text-align: right; }
+
+  .progress-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-tertiary);
+    margin-bottom: 1.5rem;
+  }
+  .prog-label { font-size: 13px; color: var(--color-text-secondary); }
+  .prog-num   { font-size: 20px; font-weight: 500; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+  .tab {
+    font-size: 13px; padding: 5px 12px;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-tertiary);
+    background: transparent; cursor: pointer; color: var(--color-text-secondary);
+  }
+  .tab.active {
+    background: var(--color-background-secondary);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-secondary);
+    font-weight: 500;
+  }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+</style>
+
+<div style="padding: 1rem 0;">
+
+  <div class="progress-banner">
+    <div>
+      <div class="prog-label">checklist progress</div>
+      <div class="prog-num" id="prog-count">0 / 22 done</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="prog-label">estimated win probability</div>
+      <div class="prog-num" id="win-prob">—</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('rivals')">22 rivals mapped</button>
+    <button class="tab" onclick="showTab('checklist')">win checklist</button>
+    <button class="tab" onclick="showTab('scores')">where you lead</button>
+  </div>
+
+  <div id="rivals" class="tab-pane active">
+    <div class="section">
+      <div class="section-title">real threats (on-chain + trading/payment focus)</div>
+      <div class="rival-grid">
+        <div class="rival-card danger">
+          <div class="rival-name">Pacifica Pilot</div>
+          <div class="rival-tag">Autonomous trading + on-chain audit</div>
+          <div class="rival-gap">Has live trades on Pacifica DEX, on-chain decision log, confidence scoring, sentiment layer. Most upvotes: 54.64. No demo video missing — yours must beat this.</div>
+        </div>
+        <div class="rival-card danger">
+          <div class="rival-name">railbird.fun</div>
+          <div class="rival-tag">AI agents + on-chain poker + sidebet market</div>
+          <div class="rival-gap">Fully deployed on HashKey Chain testnet, 6 verified contracts, live demo, video. Creative, technically impressive. Judges will love it.</div>
+        </div>
+        <div class="rival-card danger">
+          <div class="rival-name">OmniAgent</div>
+          <div class="rival-tag">Robot fleet + 77 MCP tools + A2A marketplace</div>
+          <div class="rival-gap">30+ contracts, ERC-4337, X402, ZK risk, 4-layer governance. Most technically complex entry. No HashKey Chain — on Sepolia only.</div>
+        </div>
+        <div class="rival-card medium">
+          <div class="rival-name">TrustGrid</div>
+          <div class="rival-tag">ERC-8004 agent identity + USDC escrow</div>
+          <div class="rival-gap">On HashKey Chain testnet, 16/16 tests passing, live frontend. Strong infra play but no trading.</div>
+        </div>
+        <div class="rival-card medium">
+          <div class="rival-name">Echo Protocol</div>
+          <div class="rival-tag">Permission layer for AI agents</div>
+          <div class="rival-gap">133 tests, ERC-7579, strong security narrative. Not HashKey native. Submitted Feb, may be most polished.</div>
+        </div>
+        <div class="rival-card medium">
+          <div class="rival-name">PayBrain</div>
+          <div class="rival-tag">Multi-agent OS: trade + auto-pay + ZKID</div>
+          <div class="rival-gap">Covers all 4 tracks. Claude AI powered. Live demo. But appears frontend-heavy with stub backends.</div>
+        </div>
+        <div class="rival-card medium">
+          <div class="rival-name">Aria Protocol</div>
+          <div class="rival-tag">ZK-KYC + AI risk scoring + institutional DeFi</div>
+          <div class="rival-gap">Institutional focus, ZK proofs, 7-factor ML risk engine. Live demo. Ambitious scope for solo dev.</div>
+        </div>
+        <div class="rival-card medium">
+          <div class="rival-name">IndexAI Protocol</div>
+          <div class="rival-tag">AI portfolio → one-click on-chain execution</div>
+          <div class="rival-gap">Clean concept, demo video, GitHub. Minimal description — probably shallow AI layer.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">ChainMind</div>
+          <div class="rival-tag">AI signals + auto-payment rules dashboard</div>
+          <div class="rival-gap">Flask + scikit-learn. HSP-ready stub. Covers AI + PayFi angle. Early submission but limited depth.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">Ghost Shell</div>
+          <div class="rival-tag">AI DeFi security scanner</div>
+          <div class="rival-gap">Different category (security), not trading. Production deployed.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">HashKey AI Sentinel</div>
+          <div class="rival-tag">Smart contract vulnerability scanner</div>
+          <div class="rival-gap">Security, not trading. Uses Claude API. Simple but functional.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">AgentPay</div>
+          <div class="rival-tag">Micropayment rails for AI agents</div>
+          <div class="rival-gap">0G chain, not HashKey. Payment infra only, no trading engine.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">InfinAI</div>
+          <div class="rival-tag">Neuro-symbolic DeFi intelligence</div>
+          <div class="rival-gap">Heavy on buzzwords, sparse on verifiable on-chain work. Team project.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">Division Privacy</div>
+          <div class="rival-tag">AI-generated privacy smart contracts</div>
+          <div class="rival-gap">Niche tooling, on HashKey testnet, 25 templates. Interesting but off-track.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">Penny4Thots</div>
+          <div class="rival-tag">AI-adjudicated prediction market</div>
+          <div class="rival-gap">Multi-LLM consensus. Creative, but prediction market not trading engine.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">ElderCare AI</div>
+          <div class="rival-tag">Health AI + on-chain integrity proofs</div>
+          <div class="rival-gap">Healthcare, not finance. Off-track for AI trading/payment.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">SPQE</div>
+          <div class="rival-tag">TEE-based AI agent firewall</div>
+          <div class="rival-gap">Security infra. AWS Nitro Enclaves. Interesting but no trading.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">hashkey-guardian</div>
+          <div class="rival-tag">DeFi protocol monitor via Claude</div>
+          <div class="rival-gap">Minimal description. Security monitor, not trading.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">agglayer-ai</div>
+          <div class="rival-tag">XGBoost APY prediction on Polygon</div>
+          <div class="rival-gap">Wrong chain (Polygon, not HashKey). Early submission Dec 2025.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">Monallo</div>
+          <div class="rival-tag">Polkadot AI API payment hub</div>
+          <div class="rival-gap">Wrong chain. Not targeting trading.</div>
+        </div>
+        <div class="rival-card low">
+          <div class="rival-name">Nebulai</div>
+          <div class="rival-tag">Decentralized GPU compute</div>
+          <div class="rival-gap">Infrastructure layer, no AI trading or payment features.</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--color-text-tertiary);">Red border = direct competitor. Yellow = adjacent threat. Green = different category.</p>
+    </div>
+  </div>
+
+  <div id="checklist" class="tab-pane">
+    <div class="section">
+      <div class="section-title">critical — without these you cannot win</div>
+      <ul class="checklist" id="list-critical">
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Deploy a TradeLogger contract on HashKey Chain testnet</div>
+            <div class="item-why">Pacifica Pilot's biggest edge: on-chain decision audit trail. You need the same. Every LLM decision (strategy, reasoning, confidence) logged immutably. Judges can verify on the block explorer.</div>
+          </div>
+          <span class="priority-badge p-critical">critical</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Submit a working demo video (3–5 min) showing live multi-agent operation</div>
+            <div class="item-why">Pacifica Pilot and railbird.fun both have demo videos. You currently have none. Judges watching 22 submissions will skip projects without video. Show TUI + 3 agents running simultaneously + LLM strategy reasoning live.</div>
+          </div>
+          <span class="priority-badge p-critical">critical</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a live demo link (even a hosted read-only status page)</div>
+            <div class="item-why">10 of 22 competitors have a live demo link. You have none. At minimum, host a public status dashboard that shows agent states and recent log entries pulled from a running instance.</div>
+          </div>
+          <span class="priority-badge p-critical">critical</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Update GitHub link with a real repo (not just github.com)</div>
+            <div class="item-why">Your current submission has github_page: null / "https://github.com/" — a blank. Every strong competitor has a real repo. Judges check this directly.</div>
+          </div>
+          <span class="priority-badge p-critical">critical</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="section-title">high priority — separates winners from top-5</div>
+      <ul class="checklist" id="list-high">
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Log each LLM decision on-chain: strategy chosen, confidence score, market regime, reasoning hash</div>
+            <div class="item-why">This is Pacifica Pilot's strongest feature and your biggest gap. On-chain AI transparency = verifiable AI trading. Judges from HashKey will look for this. A single Solidity event DecisionLogged(symbol, strategy, confidence, reasoning) is enough.</div>
+          </div>
+          <span class="priority-badge p-high">high</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Rewrite project description to explicitly mention 30+ quant strategies and LLM supervisor loop</div>
+            <div class="item-why">Your current description is accurate but undersells the depth. No competitor has 30+ algorithms. Lead with this number. "LLM selects from 30+ quant strategies and supervises positions every 60 seconds" — this is unique.</div>
+          </div>
+          <span class="priority-badge p-high">high</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a Telegram bot client (even basic: /status, /agents, /logs commands)</div>
+            <div class="item-why">Your roadmap already mentions it. PayBrain, ChainMind, and OmniAgent all tout multi-client access. A working Telegram bot is a concrete "practical application" the track explicitly asks for. Takes ~4 hours to build on top of your hub.</div>
+          </div>
+          <span class="priority-badge p-high">high</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Show the LLM's strategy reasoning in plain English in the demo video</div>
+            <div class="item-why">OmniAgent, Pacifica Pilot, and Railbird all make AI explainability a selling point. Your LLM already produces reasoning text — put it front and center. Show the supervisor saying "Closing LONG on BTC: ADX dropped below 25, trend weakening" in the demo.</div>
+          </div>
+          <span class="priority-badge p-high">high</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Frame the submission around "AI-powered intelligent trading" and "automatic payment" — use these exact phrases in your description</div>
+            <div class="item-why">The track description uses these exact words. ChainMind and PayBrain explicitly target both. Your project does both but doesn't say so clearly. Add a section titled "AI-Powered Intelligent Trading" and one for "Automatic Payment" (the HSP/on-chain settlement angle).</div>
+          </div>
+          <span class="priority-badge p-high">high</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add an architecture diagram to the submission</div>
+            <div class="item-why">Railbird, TrustGrid, OmniAgent, and Echo Protocol all include architecture diagrams. You have a clear architecture (TUI → AgentManager → Agents → Pyth/TwelveData/LLM) — draw it. Judges spending 2 minutes per submission will instantly understand your system depth.</div>
+          </div>
+          <span class="priority-badge p-high">high</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="section-title">medium — differentiators that push you to 1st</div>
+      <ul class="checklist" id="list-medium">
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a confidence threshold → on-chain settlement trigger ("auto-payment" angle)</div>
+            <div class="item-why">When LLM supervisor confidence > X%, log trade intent on HashKey Chain. This is the "AI-based automatic payment" the track literally asks for. Even a paper settlement event emitted on-chain qualifies and closes the gap with Pacifica Pilot's live execution.</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Mention EthIndia 2024 win and 10+ hackathon wins in the team description</div>
+            <div class="item-why">Your team bio currently only says "full stack developer, 15+ hackathons, 10+ wins." Judges want to see credibility signals. Spell out "EthIndia 2024 winner" and name the top 2–3 wins explicitly. Your track record is better than most competitors.</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a "what makes Artic different from other AI trading bots" section</div>
+            <div class="item-why">Echo Protocol and Railbird both have explicit competitor comparison tables. You should do the same. Key differentiators: 30+ strategies (vs 1–3 for competitors), real-time LLM supervisor loop (no competitor has this), multi-agent TUI (vs single-agent dashboards).</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add market regime detection to the description — mention ATR, ADX, vol_ratio features explicitly</div>
+            <div class="item-why">You already have MarketAnalyzer computing these. No competitor mentions regime detection by name. This is the signal that separates a quant system from a GPT wrapper — say it clearly.</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a cover image / banner that shows the TUI with live agents running</div>
+            <div class="item-why">Your current submission has a placeholder image. A screenshot of your actual TUI — the master-detail layout with 3 agents, live PnL, and log stream — is more compelling than any logo. First impression in the submission grid matters.</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Fix port collision race condition (known bug) and document it as resolved</div>
+            <div class="item-why">Your own docs flag this. If a judge tries to run your project and agents collide on startup, they'll mark it down. Fix `_next_port()` with a lock or pre-assign ports. One line in the README: "port collision fixed in latest commit."</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add an "incubation readiness" section describing next steps (live execution, Docker, web dashboard)</div>
+            <div class="item-why">HashKey's prize includes incubation support. PayBrain and Railbird include roadmaps. Your hub architecture doc already has a 4-phase roadmap — paste a condensed version into the submission. Judges evaluating for incubation want to see a path forward.</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a Twitter/X account for the project</div>
+            <div class="item-why">9 of 22 competitors link a Twitter account. Judges from HashKey ecosystem look at social presence. Even 5 tweets about the project build credibility during the hackathon window (deadline April 23).</div>
+          </div>
+          <span class="priority-badge p-medium">medium</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="section-title">submission hygiene — quick wins</div>
+      <ul class="checklist" id="list-hygiene">
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Set `infrastructure_tags` to include HashKey Chain (tag 71) in your submission</div>
+            <div class="item-why">Railbird, TrustGrid, Ghost Shell, and others tag HashKey Chain (71). This filters you into the right category in the judge dashboard.</div>
+          </div>
+          <span class="priority-badge p-medium">quick win</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a `other_infrastructures` entry: "layer1:HSK" and "category:AI-Powered Trading"</div>
+            <div class="item-why">Multiple competitors use this field to signal chain + category. It affects how your project appears in filtered views.</div>
+          </div>
+          <span class="priority-badge p-medium">quick win</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Rewrite the vision field to be a single punchy sentence (currently good — polish it)</div>
+            <div class="item-why">Your current vision: "Artic brings institutional-grade algorithmic trading to anyone, by letting LLM handle the driving and user choosing the road" — solid. Just tighten: remove the comma splice. First thing judges read.</div>
+          </div>
+          <span class="priority-badge p-medium">quick win</span>
+        </li>
+        <li onclick="toggle(this)">
+          <div class="check-box">✓</div>
+          <div style="flex:1">
+            <div class="item-text">Add a README.md to the GitHub repo with 1-click setup instructions</div>
+            <div class="item-why">Your own docs (03-terminal-setup.md) already have this content. Paste it in. Judges who try to run your project should be able to do so in under 5 minutes.</div>
+          </div>
+          <span class="priority-badge p-medium">quick win</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="scores" class="tab-pane">
+    <div class="section">
+      <div class="section-title">how artic compares to the field</div>
+
+      <div class="score-bar">
+        <span class="score-label">Trading algorithm depth</span>
+        <div class="score-track"><div class="score-fill" style="width:95%;background:#1D9E75;"></div></div>
+        <span class="score-num" style="color:#1D9E75;">1st</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">Multi-LLM provider support</span>
+        <div class="score-track"><div class="score-fill" style="width:95%;background:#1D9E75;"></div></div>
+        <span class="score-num" style="color:#1D9E75;">1st</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">Multi-agent orchestration</span>
+        <div class="score-track"><div class="score-fill" style="width:90%;background:#1D9E75;"></div></div>
+        <span class="score-num" style="color:#1D9E75;">1st</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">Real-time data integration</span>
+        <div class="score-track"><div class="score-fill" style="width:85%;background:#1D9E75;"></div></div>
+        <span class="score-num" style="color:#1D9E75;">top 3</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">LLM supervisor / risk loop</span>
+        <div class="score-track"><div class="score-fill" style="width:95%;background:#1D9E75;"></div></div>
+        <span class="score-num" style="color:#1D9E75;">unique</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">On-chain HashKey integration</span>
+        <div class="score-track"><div class="score-fill" style="width:15%;background:#E24B4A;"></div></div>
+        <span class="score-num" style="color:#E24B4A;">gap</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">Demo video</span>
+        <div class="score-track"><div class="score-fill" style="width:5%;background:#E24B4A;"></div></div>
+        <span class="score-num" style="color:#E24B4A;">missing</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">Live demo link</span>
+        <div class="score-track"><div class="score-fill" style="width:5%;background:#E24B4A;"></div></div>
+        <span class="score-num" style="color:#E24B4A;">missing</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">GitHub repo</span>
+        <div class="score-track"><div class="score-fill" style="width:5%;background:#E24B4A;"></div></div>
+        <span class="score-num" style="color:#E24B4A;">missing</span>
+      </div>
+      <div class="score-bar">
+        <span class="score-label">Description quality / depth</span>
+        <div class="score-track"><div class="score-fill" style="width:55%;background:#EF9F27;"></div></div>
+        <span class="score-num" style="color:#EF9F27;">mid</span>
+      </div>
+
+      <div style="margin-top:1.5rem;padding:14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);">
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px;">bottom line</div>
+        <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">
+          Your trading engine is the most technically sophisticated entry in the field — nobody has 30+ strategies, a live supervisor loop, and real Pyth + Twelve Data integration. But you're currently invisible to judges: no GitHub, no video, no demo, no on-chain proof. Pacifica Pilot leads on presentation. Close those 4 critical gaps and you move from "won't place" to "strong favourite."
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggle(li) {
+  li.classList.toggle('done');
+  updateProgress();
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('.checklist li');
+  const done = document.querySelectorAll('.checklist li.done').length;
+  document.getElementById('prog-count').textContent = done + ' / ' + all.length + ' done';
+  const pct = Math.round((done / all.length) * 100);
+  let prob;
+  if (pct < 20) prob = 'low';
+  else if (pct < 50) prob = 'moderate';
+  else if (pct < 75) prob = 'strong';
+  else prob = 'very strong';
+  document.getElementById('win-prob').textContent = pct + '% — ' + prob;
+}
+
+updateProgress();
+</script>
