@@ -3,6 +3,31 @@ import httpx
 from typing import AsyncIterator, Optional
 
 
+class HubError(Exception):
+    """Human-readable hub API error. Extracts detail from JSON response."""
+
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)
+
+
+def _raise_for_status(r: httpx.Response) -> None:
+    """Like raise_for_status() but raises HubError with the detail message."""
+    if r.is_success:
+        return
+    # extract detail from FastAPI's {"detail": "..."} response
+    detail = None
+    try:
+        body = r.json()
+        detail = body.get("detail") if isinstance(body, dict) else None
+    except Exception:
+        pass
+    if not detail:
+        detail = r.text or f"HTTP {r.status_code}"
+    raise HubError(r.status_code, detail)
+
+
 class HubClient:
     """Async client for the Artic hub API."""
 
@@ -27,14 +52,14 @@ class HubClient:
     async def login(self, email: str, password: str) -> str:
         async with self._client() as c:
             r = await c.post("/auth/login", json={"email": email, "password": password})
-            r.raise_for_status()
+            _raise_for_status(r)
             self._token = r.json()["access_token"]
             return self._token
 
     async def register(self, email: str, password: str) -> str:
         async with self._client() as c:
             r = await c.post("/auth/register", json={"email": email, "password": password})
-            r.raise_for_status()
+            _raise_for_status(r)
             self._token = r.json()["access_token"]
             return self._token
 
@@ -88,7 +113,7 @@ class HubClient:
 
         async with self._client() as c:
             r = await c.post("/api/agents", json=payload)
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     # Alias — create already auto-starts
@@ -97,13 +122,13 @@ class HubClient:
     async def list_agents(self) -> list:
         async with self._client() as c:
             r = await c.get("/api/agents")
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def get_agent(self, agent_id: str) -> dict:
         async with self._client() as c:
             r = await c.get(f"/api/agents/{agent_id}")
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def start_agent(self, agent_id: str, **overrides) -> dict:
@@ -113,37 +138,37 @@ class HubClient:
                 f"/api/agents/{agent_id}/start",
                 json=overrides if overrides else None,
             )
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def stop_agent(self, agent_id: str) -> dict:
         async with self._client() as c:
             r = await c.post(f"/api/agents/{agent_id}/stop")
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def delete_agent(self, agent_id: str) -> dict:
         async with self._client() as c:
             r = await c.delete(f"/api/agents/{agent_id}")
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def kill_all(self) -> dict:
         async with self._client() as c:
             r = await c.post("/api/agents/kill-all", json={"confirm": "KILL_ALL"})
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def get_status(self, agent_id: str) -> dict:
         async with self._client() as c:
             r = await c.get(f"/api/agents/{agent_id}/status")
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def get_logs(self, agent_id: str, limit: int = 200) -> list:
         async with self._client() as c:
             r = await c.get(f"/api/agents/{agent_id}/logs", params={"limit": limit})
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def edit_agent(self, agent_id: str, **kwargs) -> dict:
@@ -153,7 +178,7 @@ class HubClient:
                 f"/api/agents/{agent_id}",
                 json={k: v for k, v in kwargs.items() if v is not None},
             )
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     # ── Leaderboard ──────────────────────────────────────────────────────
@@ -167,7 +192,7 @@ class HubClient:
             params["symbol"] = symbol.upper()
         async with httpx.AsyncClient(base_url=self.base_url, timeout=30) as c:
             r = await c.get("/api/leaderboard", params=params)
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     async def set_leaderboard_opt_in(
@@ -178,7 +203,7 @@ class HubClient:
             payload["handle"] = handle
         async with self._client() as c:
             r = await c.post(f"/api/agents/{agent_id}/leaderboard", json=payload)
-            r.raise_for_status()
+            _raise_for_status(r)
             return r.json()
 
     # ── WebSocket streaming ──────────────────────────────────────────────
