@@ -76,7 +76,7 @@ const navItems: NavItem[] = [
         heading: "",
         items: [
           { name: "Careers", desc: "Join the team", href: "/jobs", icon: <Briefcase className="w-4 h-4" />, colors: ["#135c46", "#2a8a6a"] },
-          { name: "Open Source", desc: "Contribute on GitHub", href: "https://github.com", icon: <GitBranch className="w-4 h-4" />, colors: ["#4A2A1A", "#7A4A30"] },
+          { name: "Open Source", desc: "Contribute on GitHub", href: "https://github.com/Dragoon4002/Artic_trader", icon: <GitBranch className="w-4 h-4" />, colors: ["#4A2A1A", "#7A4A30"] },
         ],
       },
     ],
