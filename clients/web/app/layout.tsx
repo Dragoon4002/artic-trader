@@ -16,6 +16,34 @@ export const metadata: Metadata = {
   title: "Artic — AI-Powered Multi-Agent Trading",
   description:
     "Deploy AI trading agents on any market at any scale. Artic is the orchestration hub for AI-powered trading with 30+ quant strategies.",
+  icons: {
+    icon: "/artic-logo.png",
+  },
+  keywords: [
+    "AI trading",
+    "quantitative trading",
+    "algorithmic trading",
+    "multi-agent systems",
+    "crypto trading",
+    "stock trading",
+    "forex trading",
+    "trading bots",
+  ],
+  authors: [{ name: "Silonelabs" }],
+  openGraph: {
+    title: "Artic — AI-Powered Multi-Agent Trading",
+    description:
+      "Deploy AI trading agents on any market at any scale. Artic is the orchestration hub for AI-powered trading with 30+ quant strategies.",
+    images: [
+      {
+        url: "/artic-logo.png",
+        width: 800,
+        height: 600,
+        alt: "Artic Logo",
+      },
+    ],
+    siteName: "Artic",
+  },
 };
 
 export default function RootLayout({

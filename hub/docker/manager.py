@@ -15,9 +15,18 @@ def _get_client():
 def run(agent_id: str, port: int, env_vars: dict) -> str:
     """Start an agent container. Returns container ID."""
     client = _get_client()
+    name = f"artic-agent-{agent_id}"
+
+    # Remove stale container with same name (left over from crash/restart)
+    try:
+        old = client.containers.get(name)
+        old.remove(force=True)
+    except docker.errors.NotFound:
+        pass
+
     container = client.containers.run(
         "artic-app:latest",
-        name=f"artic-agent-{agent_id}",
+        name=name,
         network="artic-net",
         detach=True,
         environment=env_vars,

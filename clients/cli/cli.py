@@ -233,7 +233,10 @@ async def do_create_agent(client: HubClient):
     try:
         result = await client.create_agent(**kwargs)
         aid = result.get("id", "?")[:8]
-        print(f"Agent {result.get('name')} ({aid}) — {result.get('status')}")
+        status = result.get("status", "?")
+        print(f"Agent {result.get('name')} ({aid}) — {status}")
+        if result.get("error"):
+            print(f"  Spawn failed: {result['error']}")
     except Exception as e:
         print(f"Error: {e}")
 

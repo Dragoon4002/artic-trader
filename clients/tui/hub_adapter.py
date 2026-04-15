@@ -106,6 +106,8 @@ class HubAdapter:
         )
         info = _agent_info_from_response(result)
         self.agents[info.agent_id] = info
+        if result.get("error"):
+            raise RuntimeError(f"Agent created but spawn failed: {result['error']}")
         return info
 
     async def start_agent(self, agent_id: str) -> None:

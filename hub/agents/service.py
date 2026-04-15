@@ -65,7 +65,7 @@ async def spawn_agent(agent: Agent, db: AsyncSession, secrets: dict) -> None:
         container_id = await asyncio.to_thread(docker_mgr.run, agent.id, port, env_vars)
     except Exception as e:
         release_port(port)
-        raise RuntimeError(f"Docker spawn failed: {e}")
+        raise RuntimeError(f"Failed to start container — is Docker running? ({e})")
 
     # Poll /health every 500ms for up to 20s
     base = f"http://localhost:{port}"
@@ -84,7 +84,10 @@ async def spawn_agent(agent: Agent, db: AsyncSession, secrets: dict) -> None:
     if not healthy:
         await asyncio.to_thread(docker_mgr.stop_and_remove, container_id)
         release_port(port)
-        raise RuntimeError(f"Agent {agent.id} failed health check after 20s")
+        raise RuntimeError(
+            f"Agent container started but didn't become healthy within 20s — "
+            f"check Docker logs: docker logs artic-agent-{agent.id}"
+        )
 
     # Send /start — built entirely from Agent model
     start_request = _build_start_request(agent)
@@ -93,7 +96,7 @@ async def spawn_agent(agent: Agent, db: AsyncSession, secrets: dict) -> None:
         if r.status_code != 200:
             await asyncio.to_thread(docker_mgr.stop_and_remove, container_id)
             release_port(port)
-            raise RuntimeError(f"Agent /start failed: {r.text}")
+            raise RuntimeError(f"Agent rejected start command: {r.text}")
 
     agent.status = "alive"
     agent.container_id = container_id

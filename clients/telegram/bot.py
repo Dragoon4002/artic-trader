@@ -475,7 +475,10 @@ async def create_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> int:
         name = result.get("name", "?")
         aid = result.get("id", "?")[:8]
         status = result.get("status", "?")
-        await q.edit_message_text(f"Agent {name} launched\n{d.get('symbol')} | {status} | ID: {aid}")
+        text = f"Agent {name} created\n{d.get('symbol')} | {status} | ID: {aid}"
+        if result.get("error"):
+            text += f"\n\n\u26a0\ufe0f Spawn failed: {result['error']}"
+        await q.edit_message_text(text)
     except Exception as e:
         await q.edit_message_text(f"Launch failed: {e}")
     return ConversationHandler.END
