@@ -9,4 +9,11 @@ httpx
 docker
 RestrictedPython
 eth-account
+eth-abi
+eth-utils
 APScheduler
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-http
+openai
+anthropic
+google-generativeai
