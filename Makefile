@@ -15,8 +15,11 @@ down:
 	$(COMPOSE) down
 
 migrate:
-	alembic -c hub/alembic.ini upgrade head
-	alembic -c user-server/alembic.ini upgrade head
+	DATABASE_URL=postgresql+asyncpg://artic:artic@localhost:15432/artic \
+		alembic -c hub/alembic.ini upgrade head
+	DATABASE_URL=postgresql+asyncpg://artic:artic@localhost:15433/artic \
+		HUB_URL=x USER_ID=x USER_TOKEN=x \
+		alembic -c user-server/alembic.ini upgrade head
 
 openapi:
 	PYTHONPATH=. python scripts/dump_openapi.py > openapi.yaml

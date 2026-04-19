@@ -2,7 +2,7 @@
 fastapi
 uvicorn[standard]
 httpx
-pydantic
+pydantic[email]
 pydantic-settings
 openai
 anthropic
