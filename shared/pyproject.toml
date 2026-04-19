@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "artic-shared"
+version = "0.1.0"
+description = "Shared Pydantic models + error contracts for Artic hub, user-server, and agents."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+    "fastapi>=0.110",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shared*"]
+exclude = ["shared.tests*"]
