@@ -42,6 +42,7 @@ contracts/typechain/
 .env
 .env.*
 !.env.example
+!.env.dev.example
 *.pem
 *.key
 

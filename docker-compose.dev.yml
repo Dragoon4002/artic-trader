@@ -1,0 +1,74 @@
+# Dev compose. Prod uses docker-compose.yml — leave untouched.
+# Launch with: docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+services:
+  hub-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - hub-pgdata-dev:/var/lib/postgresql/data
+    networks:
+      - artic-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  hub:
+    build:
+      context: .
+      dockerfile: hub/Dockerfile
+    ports:
+      - "9000:9000"
+    env_file: .env.dev
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@hub-db:5432/${POSTGRES_DB}
+    depends_on:
+      hub-db:
+        condition: service_healthy
+    networks:
+      - artic-dev
+
+  user-server-db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - us-pgdata-dev:/var/lib/postgresql/data
+    networks:
+      - artic-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  user-server:
+    build:
+      context: .
+      dockerfile: user-server/Dockerfile
+    ports:
+      - "9100:8000"
+    env_file: .env.dev
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-server-db:5432/${POSTGRES_DB}
+      HUB_URL: http://hub:9000
+    depends_on:
+      user-server-db:
+        condition: service_healthy
+    networks:
+      - artic-dev
+
+networks:
+  artic-dev:
+    name: artic-dev
+    driver: bridge
+
+volumes:
+  hub-pgdata-dev:
+  us-pgdata-dev:
