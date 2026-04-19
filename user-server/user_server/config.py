@@ -20,5 +20,12 @@ class Settings(BaseSettings):
     AGENT_NETWORK: str = "artic-dev"
     DOCKER_HOST: str = ""  # empty -> docker SDK uses /var/run/docker.sock
 
+    # Chain signing
+    CHAIN_RPC_URL: str = ""
+    CHAIN_ID: int = 0
+    KEYSTORE_PATH: str = ""  # path to encrypted JSON keystore on VM rootfs
+    WALLET_PRIVATE_KEY: str = ""  # dev-only plaintext fallback; prod uses KEYSTORE_PATH + KEK
+    CONTRACTS_PATH: str = "contracts/deployed.json"
+
 
 settings = Settings()  # type: ignore[call-arg]

@@ -8,3 +8,5 @@ pydantic-settings
 httpx
 docker
 RestrictedPython
+eth-account
+APScheduler
