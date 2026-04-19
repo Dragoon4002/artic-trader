@@ -6,3 +6,5 @@ alembic
 psycopg2-binary
 pydantic-settings
 httpx
+docker
+RestrictedPython

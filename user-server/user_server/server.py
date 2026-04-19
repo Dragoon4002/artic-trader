@@ -7,12 +7,14 @@ from shared.errors import register_error_handlers
 
 from .agents.push_router import router as agent_push_router
 from .agents.router import router as agents_router
+from .strategies.router import router as strategies_router
 
 app = FastAPI(title="artic-user-server")
 register_error_handlers(app)
 
 app.include_router(agents_router)
 app.include_router(agent_push_router)
+app.include_router(strategies_router)
 
 
 @app.get("/health")
