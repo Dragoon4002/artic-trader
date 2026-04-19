@@ -21,10 +21,3 @@ async def get_session():
     """FastAPI Depends generator."""
     async with async_session() as session:
         yield session
-
-
-async def init_db():
-    """Create all tables (dev). For prod use Alembic."""
-    from . import models  # noqa: F401 — ensure all models are imported
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)

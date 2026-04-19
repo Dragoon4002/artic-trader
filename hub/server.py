@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .db.base import init_db, async_session, engine as db_engine
+from .db.base import async_session, engine as db_engine
 from .auth.router import router as auth_router, api_keys_router
 from .agents.router import router as agents_router, leaderboard_router
 from .internal.router import router as internal_router
@@ -26,8 +26,7 @@ _price_feed_task: asyncio.Task | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _scheduler, _price_feed_task
-    # Startup
-    await init_db()
+    # Startup (schema managed by Alembic; see hub/alembic.ini)
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(refresh_all_tracked, "interval", seconds=settings.CANDLE_STALENESS_SECONDS, id="candle_refresh")
     _scheduler.add_job(
