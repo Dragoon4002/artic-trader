@@ -12,7 +12,10 @@ dependencies = [
     "fastapi>=0.110",
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["shared*"]
-exclude = ["shared.tests*"]
+[tool.setuptools]
+packages = ["shared", "shared.models", "shared.tests"]
+
+[tool.setuptools.package-dir]
+"shared" = "."
+"shared.models" = "models"
+"shared.tests" = "tests"
