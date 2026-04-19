@@ -1,0 +1,44 @@
+name: docs-guard
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          list-files: shell
+          filters: |
+            routers:
+              - 'hub/**/router.py'
+              - 'user-server/**/router.py'
+            models:
+              - 'hub/db/models/**'
+              - 'user-server/**/db/models/**'
+            connections_doc:
+              - 'docs/alpha/plans/connections.md'
+            datamodel_doc:
+              - 'docs/alpha/data-model.md'
+            migrations:
+              - 'hub/alembic/versions/**'
+              - 'user-server/alembic/versions/**'
+
+      - name: routers require connections.md
+        if: steps.filter.outputs.routers == 'true' && steps.filter.outputs.connections_doc != 'true'
+        run: |
+          echo "Changed router files: ${{ steps.filter.outputs.routers_files }}"
+          echo "Router changes must also update docs/alpha/plans/connections.md."
+          exit 1
+
+      - name: models require data-model.md + migration
+        if: steps.filter.outputs.models == 'true' && (steps.filter.outputs.datamodel_doc != 'true' || steps.filter.outputs.migrations != 'true')
+        run: |
+          echo "Changed model files: ${{ steps.filter.outputs.models_files }}"
+          echo "Model changes must also update docs/alpha/data-model.md AND add an alembic version."
+          exit 1
