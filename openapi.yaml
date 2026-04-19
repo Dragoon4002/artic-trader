@@ -1,0 +1,1163 @@
+openapi: 3.1.0
+info:
+  title: Artic Hub
+  version: 0.1.0
+paths:
+  /auth/register:
+    post:
+      tags:
+      - auth
+      summary: Register
+      operationId: register_auth_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/login:
+    post:
+      tags:
+      - auth
+      summary: Login
+      operationId: login_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/refresh:
+    post:
+      tags:
+      - auth
+      summary: Refresh
+      operationId: refresh_auth_refresh_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /api/keys:
+    post:
+      tags:
+      - keys
+      summary: Generate Key
+      operationId: generate_key_api_keys_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyResponse'
+  /api/agents/kill-all:
+    post:
+      tags:
+      - agents
+      summary: Kill All Agents
+      description: 'Stop ALL agents for authenticated user. Requires {"confirm": "KILL_ALL"}.'
+      operationId: kill_all_agents_api_agents_kill_all_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KillAllRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents:
+    get:
+      tags:
+      - agents
+      summary: List Agents
+      operationId: list_agents_api_agents_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - agents
+      summary: Create Agent
+      description: 'Single unified endpoint: create agent, persist ALL config, spawn
+        immediately.'
+      operationId: create_agent_api_agents_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/{agent_id}:
+    get:
+      tags:
+      - agents
+      summary: Get Agent
+      operationId: get_agent_api_agents__agent_id__get
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - agents
+      summary: Delete Agent
+      operationId: delete_agent_api_agents__agent_id__delete
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    patch:
+      tags:
+      - agents
+      summary: Edit Agent
+      description: 'Update agent config. Running agents: hot-reload or auto-restart
+        as needed.'
+      operationId: edit_agent_api_agents__agent_id__patch
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentEditRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/{agent_id}/start:
+    post:
+      tags:
+      - agents
+      summary: Start Agent
+      description: Restart a stopped agent using persisted config. Optional overrides
+        update DB.
+      operationId: start_agent_api_agents__agent_id__start_post
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/AgentRestartRequest'
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/{agent_id}/stop:
+    post:
+      tags:
+      - agents
+      summary: Stop Agent
+      operationId: stop_agent_api_agents__agent_id__stop_post
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/{agent_id}/status:
+    get:
+      tags:
+      - agents
+      summary: Agent Status
+      operationId: agent_status_api_agents__agent_id__status_get
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/{agent_id}/logs:
+    get:
+      tags:
+      - agents
+      summary: Agent Logs
+      operationId: agent_logs_api_agents__agent_id__logs_get
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 200
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/{agent_id}/leaderboard:
+    post:
+      tags:
+      - agents
+      summary: Set Leaderboard Opt In
+      operationId: set_leaderboard_opt_in_api_agents__agent_id__leaderboard_post
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaderboardOptInRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/leaderboard:
+    get:
+      tags:
+      - leaderboard
+      summary: Get Leaderboard
+      description: "Public \u2014 no auth. Ranks opted-in agents by performance."
+      operationId: get_leaderboard_api_leaderboard_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+          title: Limit
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          type: string
+          default: total_pnl
+          title: Sort By
+      - name: symbol
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Symbol
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/agents/{agent_id}/status:
+    post:
+      tags:
+      - internal
+      summary: Push Status
+      operationId: push_status_internal_agents__agent_id__status_post
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusPush'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/trades:
+    post:
+      tags:
+      - internal
+      summary: Push Trade
+      operationId: push_trade_internal_trades_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradePush'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/onchain-decisions:
+    post:
+      tags:
+      - internal
+      summary: Push Onchain Decision
+      operationId: push_onchain_decision_internal_onchain_decisions_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnchainPush'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/onchain-trades:
+    post:
+      tags:
+      - internal
+      summary: Push Onchain Trade
+      operationId: push_onchain_trade_internal_onchain_trades_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnchainTradePush'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/logs:
+    post:
+      tags:
+      - internal
+      summary: Push Logs
+      operationId: push_logs_internal_logs_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogPush'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/market/candles:
+    get:
+      tags:
+      - market
+      summary: Get Candles
+      description: Serve cached candles or fetch fresh from TwelveData.
+      operationId: get_candles_api_market_candles_get
+      parameters:
+      - name: symbol
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Symbol
+      - name: interval
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 15m
+          title: Interval
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/market/price/{symbol}:
+    get:
+      tags:
+      - market-prices
+      summary: Get Price Endpoint
+      operationId: get_price_endpoint_api_market_price__symbol__get
+      parameters:
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Symbol
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/market/prices:
+    get:
+      tags:
+      - market-prices
+      summary: Get All Prices Endpoint
+      operationId: get_all_prices_endpoint_api_market_prices_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/secrets:
+    get:
+      tags:
+      - secrets
+      summary: List Secrets
+      description: List key names only (never return values).
+      operationId: list_secrets_api_secrets_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - secrets
+      summary: Store Secret
+      description: Store encrypted key-value in user_secrets.
+      operationId: store_secret_api_secrets_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecretCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/{agent_id}/secrets:
+    post:
+      tags:
+      - secrets
+      summary: Store Agent Secret
+      operationId: store_agent_secret_api_agents__agent_id__secrets_post
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSecretCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    AgentEditRequest:
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        amount_usdt:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Amount Usdt
+        leverage:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Leverage
+        risk_profile:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Risk Profile
+        primary_timeframe:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Primary Timeframe
+        poll_seconds:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Poll Seconds
+        tp_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Tp Pct
+        sl_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Sl Pct
+        tp_sl_mode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tp Sl Mode
+        supervisor_interval:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Supervisor Interval
+        llm_provider:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Llm Provider
+        llm_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Llm Model
+        leaderboard_opt_in:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Leaderboard Opt In
+      type: object
+      title: AgentEditRequest
+      description: "All fields optional \u2014 only provided fields are updated."
+    AgentRestartRequest:
+      properties:
+        amount_usdt:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Amount Usdt
+        leverage:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Leverage
+        live_mode:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Live Mode
+      type: object
+      title: AgentRestartRequest
+      description: "Optional overrides for restart \u2014 updates DB then spawns."
+    AgentSecretCreate:
+      properties:
+        key_name:
+          type: string
+          title: Key Name
+        encrypted_value:
+          type: string
+          title: Encrypted Value
+      type: object
+      required:
+      - key_name
+      - encrypted_value
+      title: AgentSecretCreate
+    ApiKeyResponse:
+      properties:
+        api_key:
+          type: string
+          title: Api Key
+      type: object
+      required:
+      - api_key
+      title: ApiKeyResponse
+    AuthRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: AuthRequest
+    CreateAgentRequest:
+      properties:
+        name:
+          type: string
+          title: Name
+          default: Unnamed Agent
+        symbol:
+          type: string
+          title: Symbol
+        amount_usdt:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Amount Usdt
+          default: 100.0
+        leverage:
+          type: integer
+          maximum: 125.0
+          minimum: 1.0
+          title: Leverage
+          default: 5
+        risk_profile:
+          type: string
+          title: Risk Profile
+          default: moderate
+        primary_timeframe:
+          type: string
+          title: Primary Timeframe
+          default: 15m
+        poll_seconds:
+          type: number
+          minimum: 0.5
+          title: Poll Seconds
+          default: 1.0
+        tp_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Tp Pct
+        sl_pct:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Sl Pct
+        tp_sl_mode:
+          type: string
+          title: Tp Sl Mode
+          default: fixed
+        supervisor_interval:
+          type: number
+          maximum: 300.0
+          minimum: 30.0
+          title: Supervisor Interval
+          default: 60.0
+        live_mode:
+          type: boolean
+          title: Live Mode
+          default: false
+        max_session_loss_pct:
+          type: number
+          maximum: 1.0
+          minimum: 0.01
+          title: Max Session Loss Pct
+          default: 0.1
+        llm_provider:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Llm Provider
+        llm_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Llm Model
+        llm_api_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Llm Api Key
+        auto_start:
+          type: boolean
+          title: Auto Start
+          default: true
+      type: object
+      required:
+      - symbol
+      title: CreateAgentRequest
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    KillAllRequest:
+      properties:
+        confirm:
+          type: string
+          title: Confirm
+      type: object
+      required:
+      - confirm
+      title: KillAllRequest
+    LeaderboardOptInRequest:
+      properties:
+        opt_in:
+          type: boolean
+          title: Opt In
+        handle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Handle
+      type: object
+      required:
+      - opt_in
+      title: LeaderboardOptInRequest
+    LogPush:
+      properties:
+        agent_id:
+          type: string
+          title: Agent Id
+        entries:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Entries
+      type: object
+      required:
+      - agent_id
+      - entries
+      title: LogPush
+    OnchainPush:
+      properties:
+        agent_id:
+          type: string
+          title: Agent Id
+        tx_hash:
+          type: string
+          title: Tx Hash
+        reasoning_text:
+          type: string
+          title: Reasoning Text
+      type: object
+      required:
+      - agent_id
+      - tx_hash
+      - reasoning_text
+      title: OnchainPush
+    OnchainTradePush:
+      properties:
+        agent_id:
+          type: string
+          title: Agent Id
+        tx_hash:
+          type: string
+          title: Tx Hash
+        side:
+          type: string
+          title: Side
+        entry_price:
+          type: number
+          title: Entry Price
+        exit_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Exit Price
+        pnl_bps:
+          type: integer
+          title: Pnl Bps
+          default: 0
+        detail_json:
+          type: string
+          title: Detail Json
+          default: ''
+      type: object
+      required:
+      - agent_id
+      - tx_hash
+      - side
+      - entry_price
+      title: OnchainTradePush
+    SecretCreate:
+      properties:
+        key_name:
+          type: string
+          title: Key Name
+        encrypted_value:
+          type: string
+          title: Encrypted Value
+      type: object
+      required:
+      - key_name
+      - encrypted_value
+      title: SecretCreate
+    StatusPush:
+      properties:
+        running:
+          type: boolean
+          title: Running
+          default: false
+        symbol:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Symbol
+        last_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Last Price
+        side:
+          type: string
+          title: Side
+          default: FLAT
+        entry_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Entry Price
+        position_size_usdt:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Position Size Usdt
+        leverage:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Leverage
+        unrealized_pnl_usdt:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Unrealized Pnl Usdt
+        last_action:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Action
+        last_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Reason
+        active_strategy:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Active Strategy
+      type: object
+      title: StatusPush
+    TokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+      type: object
+      required:
+      - access_token
+      title: TokenResponse
+    TradePush:
+      properties:
+        agent_id:
+          type: string
+          title: Agent Id
+        side:
+          type: string
+          title: Side
+        entry_price:
+          type: number
+          title: Entry Price
+        exit_price:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Exit Price
+        size_usdt:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Size Usdt
+        leverage:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Leverage
+        pnl:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Pnl
+        strategy:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Strategy
+        close_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Close Reason
+        tx_hash:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tx Hash
+      type: object
+      required:
+      - agent_id
+      - side
+      - entry_price
+      title: TradePush
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
