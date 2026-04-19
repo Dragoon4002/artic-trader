@@ -487,3 +487,4 @@ async def get_leaderboard(
         "sort_by": sort_by,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+
