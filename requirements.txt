@@ -15,6 +15,7 @@ sqlalchemy[asyncio]
 asyncpg
 alembic
 psycopg2-binary  # alembic migrations only (sync driver)
+pyyaml  # scripts/dump_openapi.py
 PyJWT
 passlib[bcrypt]
 docker
