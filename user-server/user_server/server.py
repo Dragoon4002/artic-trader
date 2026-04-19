@@ -1,12 +1,18 @@
-"""user-server FastAPI entry. Stub — real lifecycle lives in zone work."""
+"""user-server FastAPI entry."""
 from __future__ import annotations
 
 from fastapi import FastAPI
 
 from shared.errors import register_error_handlers
 
+from .agents.push_router import router as agent_push_router
+from .agents.router import router as agents_router
+
 app = FastAPI(title="artic-user-server")
 register_error_handlers(app)
+
+app.include_router(agents_router)
+app.include_router(agent_push_router)
 
 
 @app.get("/health")
