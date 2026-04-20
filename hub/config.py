@@ -1,16 +1,54 @@
 """Hub configuration via pydantic-settings."""
+
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = ""  # must set via .env (postgresql+asyncpg://...)
-    INTERNAL_SECRET: str = "changeme"
+    # Core
+    DATABASE_URL: str = ""  # postgresql+asyncpg://...
+    ENV: str = "dev"  # dev | staging | prod
+    HUB_PORT: int = 8000
+
+    # Auth / secrets
     JWT_SECRET: str = "changeme-jwt"
     JWT_EXPIRY_MINUTES: int = 15
+    REFRESH_EXPIRY_DAYS: int = 30
+    KEK: str = ""  # 32-byte base64; required in prod
+    INTERNAL_SECRET: str = "changeme"  # shared with user-server (legacy name)
+
+    # mTLS
+    HUB_CA_KEY_PATH: str = ""  # PEM file on disk; dev generates self-signed
+    HUB_CA_CERT_PATH: str = ""
+
+    # VM provider
+    VM_PROVIDER: str = "morph"  # morph | firecracker
+    VM_PROVIDER_TOKEN: str = ""
+    VM_IMAGE_TAG: str = "user-server:v0.1.0"
+    MORPH_API_KEY: str = ""
+    MORPH_BASE_URL: str = "https://cloud.morph.so/api"
+    BASE_SNAPSHOT_ID: str = ""
+    MORPH_GOLDEN_SNAPSHOT_ID: str = ""
+
+    # Market
     TWELVE_DATA_API_KEY: str = ""
+    PYTH_HERMES_URL: str = "https://hermes.pyth.network"
     CANDLE_STALENESS_SECONDS: int = 60
     PRICE_POLL_SECONDS: float = 2.0
-    HUB_PORT: int = 8000
+
+    # Proxy
+    PROXY_CONNECT_TIMEOUT_SECONDS: float = 5.0
+    PROXY_READ_TIMEOUT_SECONDS: float = 10.0
+    VM_WAKE_TIMEOUT_SECONDS: float = 10.0
+
+    # Chain / funder (stubbed this branch)
+    HSK_RPC_URL: str = ""
+    PLATFORM_WALLET_KEY: str = ""
+    FUND_FLOOR_WEI: int = 0
+    FUND_TOPUP_WEI: int = 0
+    FUND_INTERVAL_SEC: int = 18000
+
+    # OTel
+    OTEL_COLLECTOR_URL: str = ""
 
     # Wallet auth
     AUTH_MESSAGE_DOMAIN: str = "artic.trade"

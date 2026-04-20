@@ -1,6 +1,8 @@
 """WebSocket endpoints for streaming agent status, logs, and prices."""
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from .manager import subscribe, unsubscribe, subscribe_prices, unsubscribe_prices
+
+from .manager import subscribe, subscribe_prices, unsubscribe, unsubscribe_prices
 
 router = APIRouter(tags=["websocket"])
 

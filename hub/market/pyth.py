@@ -1,4 +1,5 @@
 """Async batch price fetcher using Pyth Hermes REST API."""
+
 import logging
 from datetime import datetime, timezone
 from typing import Dict
@@ -42,7 +43,9 @@ PYTH_FEED_IDS: Dict[str, str] = {
 
 SYMBOL_ALIASES: Dict[str, str] = {"MATIC": "POL"}
 
-_ID_TO_SYMBOL: Dict[str, str] = {v.replace("0x", ""): k for k, v in PYTH_FEED_IDS.items()}
+_ID_TO_SYMBOL: Dict[str, str] = {
+    v.replace("0x", ""): k for k, v in PYTH_FEED_IDS.items()
+}
 
 
 def normalize_base(symbol: str) -> str:

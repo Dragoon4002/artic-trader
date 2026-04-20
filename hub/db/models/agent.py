@@ -1,7 +1,9 @@
 """Agent ORM model."""
+
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Float, Integer, Boolean, DateTime, ForeignKey
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import Base
@@ -10,7 +12,9 @@ from ..base import Base
 class Agent(Base):
     __tablename__ = "agents"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
 
     # Identity
@@ -54,7 +58,15 @@ class Agent(Base):
 
     user = relationship("User", back_populates="agents")
     trades = relationship("Trade", back_populates="agent", cascade="all, delete-orphan")
-    log_entries = relationship("LogEntry", back_populates="agent", cascade="all, delete-orphan")
-    secret_overrides = relationship("AgentSecretOverride", back_populates="agent", cascade="all, delete-orphan")
-    onchain_decisions = relationship("OnchainDecision", back_populates="agent", cascade="all, delete-orphan")
-    onchain_trades = relationship("OnchainTrade", back_populates="agent", cascade="all, delete-orphan")
+    log_entries = relationship(
+        "LogEntry", back_populates="agent", cascade="all, delete-orphan"
+    )
+    secret_overrides = relationship(
+        "AgentSecretOverride", back_populates="agent", cascade="all, delete-orphan"
+    )
+    onchain_decisions = relationship(
+        "OnchainDecision", back_populates="agent", cascade="all, delete-orphan"
+    )
+    onchain_trades = relationship(
+        "OnchainTrade", back_populates="agent", cascade="all, delete-orphan"
+    )

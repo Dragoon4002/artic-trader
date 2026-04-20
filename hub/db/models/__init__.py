@@ -1,14 +1,23 @@
-"""Re-export all ORM models + Base."""
+"""Re-export all ORM models + Base.
+
+Note: Agent / Trade / LogEntry / Onchain* models are retained so existing FKs load,
+but their routers are quarantined under hub/deprecated/. They migrate to user-server
+in a follow-up branch.
+"""
+
 from ..base import Base
-from .user import User
 from .agent import Agent
-from .trade import Trade
-from .log_entry import LogEntry
-from .market_cache import MarketCache
-from .secret import UserSecret, AgentSecretOverride
-from .onchain import OnchainDecision, OnchainTrade
+from .audit_log import AuditLog
 from .auth_nonce import AuthNonce
 from .auth_session_key import AuthSessionKey
+from .log_entry import LogEntry
+from .market_cache import MarketCache
+from .onchain import OnchainDecision, OnchainTrade
+from .refresh_token import RefreshToken
+from .secret import AgentSecretOverride, UserSecret
+from .trade import Trade
+from .user import User
+from .user_vm import UserVM
 
 __all__ = [
     "Base",
@@ -23,4 +32,7 @@ __all__ = [
     "OnchainTrade",
     "AuthNonce",
     "AuthSessionKey",
+    "UserVM",
+    "AuditLog",
+    "RefreshToken",
 ]

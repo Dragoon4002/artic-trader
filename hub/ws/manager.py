@@ -1,7 +1,9 @@
 """WebSocket connection pool and broadcast."""
+
 import asyncio
 import json
 from collections import defaultdict
+
 from fastapi import WebSocket
 
 _subscribers: dict[str, set[WebSocket]] = defaultdict(set)

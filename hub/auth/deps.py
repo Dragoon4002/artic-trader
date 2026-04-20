@@ -1,4 +1,5 @@
 """FastAPI auth dependencies."""
+
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

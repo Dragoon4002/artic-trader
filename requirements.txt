@@ -19,8 +19,10 @@ pyyaml  # scripts/dump_openapi.py
 PyJWT
 ecdsa           # secp256k1 verify for Cosmos ADR-36 + session-key sigs
 bech32          # address derivation for ADR-36 verifier
+cryptography  # AES-GCM + x509 CA for hub/utils/mtls.py
 docker
 websockets
+morphcloud  # VM provider SDK
 
 # Client deps
 python-telegram-bot>=20.0
