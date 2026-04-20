@@ -177,6 +177,11 @@ async def verify_signature(
         )
         db.add(user)
         await db.flush()
+        # Lazy-provision a user_vms row on first sign-in so the wake-proxy
+        # middleware can wake on first /u/* request. Actual VM start is deferred.
+        from ..vm import get_service as _get_vm_service
+
+        await _get_vm_service().provision_for_user(db, user.id)
     else:
         if init_name or initia_names.is_stale(user.init_username_resolved_at):
             user.init_username = init_name

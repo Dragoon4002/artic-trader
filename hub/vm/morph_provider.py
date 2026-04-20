@@ -29,7 +29,7 @@ class MorphProvider:
         self.api_key = api_key or settings.MORPH_API_KEY
         self.base_url = (base_url or settings.MORPH_BASE_URL).rstrip("/")
         self.image_tag = image_tag or settings.VM_IMAGE_TAG
-        self.hub_url = hub_url or ""
+        self.hub_url = hub_url or settings.HUB_PUBLIC_URL
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -69,16 +69,27 @@ class MorphProvider:
     async def launch_user_server(
         self, vm_id: str, user_id: str, user_token: str
     ) -> str:
-        """Run the user-server container then expose port 80. See morph-vm.md §4.4."""
+        """Run the user-server container then expose port 80. See morph-vm.md §4.4.
+
+        Image is loaded into the VM by the golden snapshot build (see
+        scripts/build_golden_snapshot.py). Image tag is the local docker tag —
+        no external registry. AGENT_IMAGE is passed through so user-server
+        spawns agents from the sibling image also baked into the snapshot.
+        """
         run_cmd = (
             "docker run -d --rm --name user-server "
             "-v /var/run/docker.sock:/var/run/docker.sock "
-            "-e DATABASE_URL=postgres://artic@localhost:5432/artic "
+            "--network host "
+            "-e DATABASE_URL=postgresql+asyncpg://artic@localhost:5432/artic "
             f"-e HUB_URL={self.hub_url} "
             f"-e USER_ID={user_id} "
             f"-e USER_TOKEN={user_token} "
+            f"-e HUB_SECRET={settings.INTERNAL_SECRET} "
+            f"-e INTERNAL_SECRET={settings.INTERNAL_SECRET} "
+            f"-e AGENT_IMAGE=artic-agent:{self.image_tag} "
+            "-e AGENT_NETWORK=bridge "
             "-p 80:8000 "
-            f"ghcr.io/silonelabs/artic-user-server:{self.image_tag}"
+            f"artic-user-server:{self.image_tag}"
         )
         await self._exec(vm_id, f"bash -lc '{run_cmd}'", timeout=120.0)
         # Healthz poll before exposing — fixes the morph-server.md §4 502-race.

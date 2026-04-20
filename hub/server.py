@@ -22,6 +22,7 @@ from .auth.router import api_keys_router
 from .auth.router import router as auth_router
 from .config import settings
 from .db.base import engine as db_engine
+from .internal.images import router as images_router
 from .internal.router import router as internal_router
 from .market.price_feed import price_feed_loop
 from .market.router import router as market_router
@@ -33,7 +34,7 @@ from .secrets import push as secrets_push
 from .secrets.service import router as secrets_router
 from .utils import mtls
 from .utils.errors import install_error_handlers
-from .vm import build_default_service
+from .vm import get_service
 from .ws.broadcaster import router as ws_router
 from .ws.manager import broadcast_prices
 
@@ -44,7 +45,7 @@ _price_feed_task: asyncio.Task | None = None
 
 # Build proxy dependencies at module scope so the middleware stack is fixed before
 # startup (FastAPI locks middleware once the app starts serving).
-vm_service = build_default_service()
+vm_service = get_service()
 vm_service.secrets_push = secrets_push.push
 forwarder = Forwarder(verify=False)  # dev; prod uses minted VM certs via utils.mtls
 
@@ -102,6 +103,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(api_keys_router)
 app.include_router(internal_router)
+app.include_router(images_router)
 app.include_router(market_router)
 app.include_router(secrets_router)
 app.include_router(ws_router)

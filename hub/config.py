@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     # VM provider
     VM_PROVIDER: str = "morph"  # morph | firecracker
     VM_PROVIDER_TOKEN: str = ""
-    VM_IMAGE_TAG: str = "user-server:v0.1.0"
+    VM_IMAGE_TAG: str = "v0"  # local docker tag on images baked into golden snapshot
+    HUB_PUBLIC_URL: str = ""  # reachable from Morph VM; used by golden build + user-server callbacks
     MORPH_API_KEY: str = ""
     MORPH_BASE_URL: str = "https://cloud.morph.so/api"
     BASE_SNAPSHOT_ID: str = ""
