@@ -2,51 +2,74 @@
 
 _SYMBOL_MAP: dict[str, str] = {
     # Bitcoin
-    "BTC": "BTCUSDT", "BITCOIN": "BTCUSDT", "XBT": "BTCUSDT",
+    "BTC": "BTCUSDT",
+    "BITCOIN": "BTCUSDT",
+    "XBT": "BTCUSDT",
     # Ethereum
-    "ETH": "ETHUSDT", "ETHEREUM": "ETHUSDT", "ETHER": "ETHUSDT",
+    "ETH": "ETHUSDT",
+    "ETHEREUM": "ETHUSDT",
+    "ETHER": "ETHUSDT",
     # Solana
-    "SOL": "SOLUSDT", "SOLANA": "SOLUSDT",
+    "SOL": "SOLUSDT",
+    "SOLANA": "SOLUSDT",
     # BNB
-    "BNB": "BNBUSDT", "BINANCECOIN": "BNBUSDT",
+    "BNB": "BNBUSDT",
+    "BINANCECOIN": "BNBUSDT",
     # XRP
-    "XRP": "XRPUSDT", "RIPPLE": "XRPUSDT",
+    "XRP": "XRPUSDT",
+    "RIPPLE": "XRPUSDT",
     # Cardano
-    "ADA": "ADAUSDT", "CARDANO": "ADAUSDT",
+    "ADA": "ADAUSDT",
+    "CARDANO": "ADAUSDT",
     # Dogecoin
-    "DOGE": "DOGEUSDT", "DOGECOIN": "DOGEUSDT",
+    "DOGE": "DOGEUSDT",
+    "DOGECOIN": "DOGEUSDT",
     # Polygon
-    "MATIC": "MATICUSDT", "POL": "POLUSDT", "POLYGON": "MATICUSDT",
+    "MATIC": "MATICUSDT",
+    "POL": "POLUSDT",
+    "POLYGON": "MATICUSDT",
     # Avalanche
-    "AVAX": "AVAXUSDT", "AVALANCHE": "AVAXUSDT",
+    "AVAX": "AVAXUSDT",
+    "AVALANCHE": "AVAXUSDT",
     # Chainlink
-    "LINK": "LINKUSDT", "CHAINLINK": "LINKUSDT",
+    "LINK": "LINKUSDT",
+    "CHAINLINK": "LINKUSDT",
     # Polkadot
-    "DOT": "DOTUSDT", "POLKADOT": "DOTUSDT",
+    "DOT": "DOTUSDT",
+    "POLKADOT": "DOTUSDT",
     # Litecoin
-    "LTC": "LTCUSDT", "LITECOIN": "LTCUSDT",
+    "LTC": "LTCUSDT",
+    "LITECOIN": "LTCUSDT",
     # Uniswap
-    "UNI": "UNIUSDT", "UNISWAP": "UNIUSDT",
+    "UNI": "UNIUSDT",
+    "UNISWAP": "UNIUSDT",
     # Cosmos
-    "ATOM": "ATOMUSDT", "COSMOS": "ATOMUSDT",
+    "ATOM": "ATOMUSDT",
+    "COSMOS": "ATOMUSDT",
     # Near
     "NEAR": "NEARUSDT",
     # Arbitrum
-    "ARB": "ARBUSDT", "ARBITRUM": "ARBUSDT",
+    "ARB": "ARBUSDT",
+    "ARBITRUM": "ARBUSDT",
     # Optimism
-    "OP": "OPUSDT", "OPTIMISM": "OPUSDT",
+    "OP": "OPUSDT",
+    "OPTIMISM": "OPUSDT",
     # Sui
     "SUI": "SUIUSDT",
     # Aptos
-    "APT": "APTUSDT", "APTOS": "APTUSDT",
+    "APT": "APTUSDT",
+    "APTOS": "APTUSDT",
     # Pepe
     "PEPE": "PEPEUSDT",
     # Render
-    "RNDR": "RNDRUSDT", "RENDER": "RNDRUSDT",
+    "RNDR": "RNDRUSDT",
+    "RENDER": "RNDRUSDT",
     # Injective
-    "INJ": "INJUSDT", "INJECTIVE": "INJUSDT",
+    "INJ": "INJUSDT",
+    "INJECTIVE": "INJUSDT",
     # Toncoin
-    "TON": "TONUSDT", "TONCOIN": "TONUSDT",
+    "TON": "TONUSDT",
+    "TONCOIN": "TONUSDT",
 }
 
 

@@ -1,56 +1,42 @@
-# Hub Module — Artic
+# Hub Module — Artic (alpha Phase 1)
 
-Standalone FastAPI server. Owns agent lifecycle, user auth, secrets, market cache, and client-facing REST/WebSocket API.
+Persistent FastAPI server. Owns auth, wake-proxy routing, cross-user state, market cache, secrets, observability. Per-user agent/strategy execution lives on the user-server (reached via the proxy).
 
 ## Folder Structure
 
 ```
 hub/
-├── server.py              # FastAPI entry, route registration
-├── config.py              # Settings (env-based)
-├── agents/                # Agent lifecycle
-│   ├── router.py          # /api/agents/* endpoints
-│   ├── service.py         # Agent spawn/stop logic
-│   └── registry.py        # In-memory live state cache
-├── docker/                # Container management
-│   ├── manager.py         # Docker SDK create/start/stop/remove
-│   └── ports.py           # Atomic thread-safe port allocation
-├── auth/                  # Authentication
-│   ├── router.py          # /auth/login, /auth/refresh
-│   ├── service.py         # JWT + API key verification
-│   └── deps.py            # get_current_user dependency
-├── internal/              # Agent→Hub push endpoints
-│   └── router.py          # /internal/agents/{id}/status, /trades, /logs
-├── ws/                    # WebSocket streaming
-│   ├── manager.py         # Connection pool
-│   └── broadcaster.py     # Poll agents, push to WS clients
-├── market_cache/          # Centralized candle cache
-│   └── service.py         # APScheduler refresh, 60s staleness
-├── secrets/               # Secret management
-│   └── service.py         # Encrypted DB + ephemeral override
-├── db/                    # Database layer
-│   ├── base.py            # SQLAlchemy async engine, get_session
-│   └── models/            # ORM models (one per table)
-├── client.py              # Hub SDK (used by all clients)
-└── alembic/               # DB migrations
+├── server.py          # FastAPI app factory, lifespan, middleware registration
+├── config.py          # pydantic-settings (env-based)
+├── auth/              # JWT + bcrypt + rotating refresh tokens
+├── secrets/           # AES-GCM storage + wake-time push
+├── vm/                # Provider Protocol, MorphProvider, VMService, registry
+├── proxy/             # Wake-proxy middleware + mTLS forwarder + /ws/u/*
+├── market/            # Pyth live prices + TwelveData candle cache + scheduler
+├── internal/          # User-server → hub callbacks (heartbeat/flush/otel stubs)
+├── audit/             # Append-only audit_log writer
+├── utils/             # mtls.py (CA + per-VM cert), errors.py (error envelope)
+├── db/                # SQLAlchemy async + models + Alembic
+├── ws/                # Price-broadcast WebSocket manager
+├── deprecated/        # agents/, docker/, agent_manager.py — pending move to user-server
+├── credits/ funder/ marketplace/ indexer/ admin/ otel/   # Phase 4/5 stubs
+└── alembic/           # Migrations
 ```
 
-## Exposes To Clients
+## Current endpoints
 
-- Agent CRUD, status proxy, log streaming (WebSocket)
-- Auth (JWT + API key), secret management
-- Market candle cache (`GET /api/market/candles`)
-
-## Receives From Agents (push-based)
-
-| Internal Endpoint | Auth | Purpose |
-|-------------------|------|---------|
-| POST /internal/agents/{id}/status | X-Internal-Secret | Status push every tick |
-| POST /internal/trades | X-Internal-Secret | Trade open/close events |
-| POST /internal/logs | X-Internal-Secret | Log batch every 10 ticks |
+- `POST /auth/{register,login,refresh,logout}`, `GET /auth/me`, `POST /api/keys`
+- `POST /api/v1/secrets`, `GET /api/v1/secrets`, `DELETE /api/v1/secrets/{key}`
+- `GET /api/market/{price/{sym},prices,candles}`
+- `/api/v1/u/*` (proxied to user-server; cold-wakes VM)
+- `POST /internal/v1/{credits/heartbeat,indexer/flush,otel/spans}` (stubs)
+- `GET /health`, `GET /health/ready`
+- `/ws/u/agents/{id}/{status,logs}` (stubbed — full impl lands with user-server)
+- `/ws/prices` (live price broadcast)
 
 ## Docs
 
-- Auth: `/docs/connections/auth-flow.md`
-- Service map: `/docs/connections/service-map.md`
-- Data model: `/docs/architecture/data-model.md`
+- Target architecture: `/docs/alpha/plans/hub.md`
+- VM provider contract: `/docs/alpha/morph-vm.md`
+- Data model: `/docs/alpha/data-model.md`
+- Security: `/docs/alpha/security-model.md`

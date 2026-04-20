@@ -1,6 +1,8 @@
 """Hub SDK — Python client for all Artic clients (TUI, CLI, Telegram)."""
-import httpx
+
 from typing import AsyncIterator, Optional
+
+import httpx
 
 
 class HubError(Exception):
@@ -31,7 +33,12 @@ def _raise_for_status(r: httpx.Response) -> None:
 class HubClient:
     """Async client for the Artic hub API."""
 
-    def __init__(self, base_url: str = "http://localhost:8000", token: str | None = None, api_key: str | None = None):
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8000",
+        token: str | None = None,
+        api_key: str | None = None,
+    ):
         self.base_url = base_url.rstrip("/")
         self._token = token
         self._api_key = api_key
@@ -45,7 +52,9 @@ class HubClient:
         return h
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(base_url=self.base_url, headers=self._headers(), timeout=30)
+        return httpx.AsyncClient(
+            base_url=self.base_url, headers=self._headers(), timeout=30
+        )
 
     # ── Auth ─────────────────────────────────────────────────────────────
 
@@ -58,7 +67,9 @@ class HubClient:
 
     async def register(self, email: str, password: str) -> str:
         async with self._client() as c:
-            r = await c.post("/auth/register", json={"email": email, "password": password})
+            r = await c.post(
+                "/auth/register", json={"email": email, "password": password}
+            )
             _raise_for_status(r)
             self._token = r.json()["access_token"]
             return self._token
@@ -184,7 +195,10 @@ class HubClient:
     # ── Leaderboard ──────────────────────────────────────────────────────
 
     async def get_leaderboard(
-        self, limit: int = 20, sort_by: str = "total_pnl", symbol: Optional[str] = None,
+        self,
+        limit: int = 20,
+        sort_by: str = "total_pnl",
+        symbol: Optional[str] = None,
     ) -> dict:
         """Public — no auth required."""
         params: dict = {"limit": limit, "sort_by": sort_by}
@@ -196,7 +210,10 @@ class HubClient:
             return r.json()
 
     async def set_leaderboard_opt_in(
-        self, agent_id: str, opt_in: bool, handle: Optional[str] = None,
+        self,
+        agent_id: str,
+        opt_in: bool,
+        handle: Optional[str] = None,
     ) -> dict:
         payload: dict = {"opt_in": opt_in}
         if handle:
@@ -209,16 +226,20 @@ class HubClient:
     # ── WebSocket streaming ──────────────────────────────────────────────
 
     async def ws_status(self, agent_id: str) -> AsyncIterator[dict]:
-        import websockets
         import json
+
+        import websockets
+
         url = self.base_url.replace("http", "ws") + f"/ws/agents/{agent_id}/status"
         async with websockets.connect(url) as ws:
             async for msg in ws:
                 yield json.loads(msg)
 
     async def ws_logs(self, agent_id: str) -> AsyncIterator[dict]:
-        import websockets
         import json
+
+        import websockets
+
         url = self.base_url.replace("http", "ws") + f"/ws/agents/{agent_id}/logs"
         async with websockets.connect(url) as ws:
             async for msg in ws:

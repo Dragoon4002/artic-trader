@@ -18,6 +18,8 @@ psycopg2-binary  # alembic migrations only (sync driver)
 pyyaml  # scripts/dump_openapi.py
 PyJWT
 passlib[bcrypt]
+bcrypt
+cryptography  # AES-GCM + x509 CA for hub/utils/mtls.py
 docker
 websockets
 

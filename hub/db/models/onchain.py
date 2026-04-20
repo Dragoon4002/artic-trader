@@ -1,7 +1,18 @@
 """OnchainDecision + OnchainTrade ORM models."""
+
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, BigInteger, Numeric, Text, LargeBinary, DateTime, ForeignKey
+
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..base import Base
@@ -10,8 +21,12 @@ from ..base import Base
 class OnchainDecision(Base):
     __tablename__ = "onchain_decisions"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    agent_id: Mapped[str] = mapped_column(String, ForeignKey("agents.id"), nullable=False)
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    agent_id: Mapped[str] = mapped_column(
+        String, ForeignKey("agents.id"), nullable=False
+    )
     session_id: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     tx_hash: Mapped[str] = mapped_column(String, nullable=False)
     block_number: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -26,8 +41,12 @@ class OnchainDecision(Base):
 class OnchainTrade(Base):
     __tablename__ = "onchain_trades"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    agent_id: Mapped[str] = mapped_column(String, ForeignKey("agents.id"), nullable=False)
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    agent_id: Mapped[str] = mapped_column(
+        String, ForeignKey("agents.id"), nullable=False
+    )
     tx_hash: Mapped[str] = mapped_column(String, nullable=False)
     side: Mapped[str] = mapped_column(String, nullable=False)
     entry_price: Mapped[float] = mapped_column(Numeric, nullable=False)

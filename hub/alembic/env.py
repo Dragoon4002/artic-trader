@@ -1,4 +1,5 @@
 """Sync Alembic env. Rewrites DATABASE_URL driver +asyncpg -> +psycopg2."""
+
 from __future__ import annotations
 
 import os
@@ -7,8 +8,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from hub.db.base import Base
 from hub.db import models  # noqa: F401 — register model metadata
+from hub.db.base import Base
 
 config = context.config
 
