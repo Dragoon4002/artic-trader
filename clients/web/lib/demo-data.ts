@@ -128,62 +128,32 @@ export interface DemoTrade {
 }
 
 export const demoTrades: DemoTrade[] = [
-  {
-    id: "t1",
-    agent_id: "a1c9f3d2-11aa-4b5f-8c27-001",
-    side: "long",
-    entry_price: 62_410.5,
-    exit_price: 62_840.8,
-    size_usdt: 500,
-    leverage: 5,
-    pnl: 17.24,
-    strategy: "ema_crossover",
-    close_reason: "TP",
-    opened_at: "2026-04-20T09:31:12Z",
-    closed_at: "2026-04-20T11:05:44Z",
-  },
-  {
-    id: "t2",
-    agent_id: "a1c9f3d2-11aa-4b5f-8c27-001",
-    side: "long",
-    entry_price: 61_940.0,
-    exit_price: 62_241.3,
-    size_usdt: 500,
-    leverage: 5,
-    pnl: 12.14,
-    strategy: "ema_crossover",
-    close_reason: "SUPERVISOR",
-    opened_at: "2026-04-19T22:10:03Z",
-    closed_at: "2026-04-19T23:47:00Z",
-  },
-  {
-    id: "t3",
-    agent_id: "a1c9f3d2-11aa-4b5f-8c27-001",
-    side: "short",
-    entry_price: 63_100.0,
-    exit_price: 63_280.5,
-    size_usdt: 500,
-    leverage: 5,
-    pnl: -7.15,
-    strategy: "ema_crossover",
-    close_reason: "SL",
-    opened_at: "2026-04-19T14:02:45Z",
-    closed_at: "2026-04-19T14:38:12Z",
-  },
-  {
-    id: "t4",
-    agent_id: "a1c9f3d2-11aa-4b5f-8c27-001",
-    side: "long",
-    entry_price: 62_630.0,
-    exit_price: null,
-    size_usdt: 500,
-    leverage: 5,
-    pnl: null,
-    strategy: "ema_crossover",
-    close_reason: null,
-    opened_at: "2026-04-20T12:14:09Z",
-    closed_at: null,
-  },
+  // ── BTC agent — ema_crossover ─────────────────────────────────────
+  { id: "t1", agent_id: "a1c9f3d2-11aa-4b5f-8c27-001", side: "long",  entry_price: 61_210.0, exit_price: 61_020.0, size_usdt: 500, leverage: 5, pnl:  -7.76, strategy: "ema_crossover", close_reason: "SL",         opened_at: "2026-04-18T09:02:14Z", closed_at: "2026-04-18T10:20:02Z" },
+  { id: "t2", agent_id: "a1c9f3d2-11aa-4b5f-8c27-001", side: "long",  entry_price: 61_500.0, exit_price: 61_902.0, size_usdt: 500, leverage: 5, pnl:  16.34, strategy: "ema_crossover", close_reason: "TP",         opened_at: "2026-04-18T14:40:00Z", closed_at: "2026-04-18T16:10:20Z" },
+  { id: "t3", agent_id: "a1c9f3d2-11aa-4b5f-8c27-001", side: "short", entry_price: 63_100.0, exit_price: 63_280.5, size_usdt: 500, leverage: 5, pnl:  -7.15, strategy: "ema_crossover", close_reason: "SL",         opened_at: "2026-04-19T14:02:45Z", closed_at: "2026-04-19T14:38:12Z" },
+  { id: "t4", agent_id: "a1c9f3d2-11aa-4b5f-8c27-001", side: "long",  entry_price: 61_940.0, exit_price: 62_241.3, size_usdt: 500, leverage: 5, pnl:  12.14, strategy: "ema_crossover", close_reason: "SUPERVISOR", opened_at: "2026-04-19T22:10:03Z", closed_at: "2026-04-19T23:47:00Z" },
+  { id: "t5", agent_id: "a1c9f3d2-11aa-4b5f-8c27-001", side: "long",  entry_price: 62_410.5, exit_price: 62_840.8, size_usdt: 500, leverage: 5, pnl:  17.24, strategy: "ema_crossover", close_reason: "TP",         opened_at: "2026-04-20T09:31:12Z", closed_at: "2026-04-20T11:05:44Z" },
+  // Open position (no close yet)
+  { id: "t6", agent_id: "a1c9f3d2-11aa-4b5f-8c27-001", side: "long",  entry_price: 62_630.0, exit_price: null,     size_usdt: 500, leverage: 5, pnl:  null,  strategy: "ema_crossover", close_reason: null,         opened_at: "2026-04-20T12:14:09Z", closed_at: null },
+
+  // ── ETH agent — rsi_reversion (net negative) ──────────────────────
+  { id: "e1", agent_id: "b2e8d1c7-22bb-4c6e-9d38-002", side: "short", entry_price: 3_120.0,  exit_price: 3_088.0,  size_usdt: 300, leverage: 3, pnl:   9.23, strategy: "rsi_reversion", close_reason: "TP",         opened_at: "2026-04-18T11:05:00Z", closed_at: "2026-04-18T12:55:14Z" },
+  { id: "e2", agent_id: "b2e8d1c7-22bb-4c6e-9d38-002", side: "long",  entry_price: 3_068.0,  exit_price: 3_012.0,  size_usdt: 300, leverage: 3, pnl: -16.44, strategy: "rsi_reversion", close_reason: "SL",         opened_at: "2026-04-18T20:20:00Z", closed_at: "2026-04-18T21:44:41Z" },
+  { id: "e3", agent_id: "b2e8d1c7-22bb-4c6e-9d38-002", side: "short", entry_price: 3_095.0,  exit_price: 3_121.0,  size_usdt: 300, leverage: 3, pnl:  -7.55, strategy: "rsi_reversion", close_reason: "SUPERVISOR", opened_at: "2026-04-19T08:15:00Z", closed_at: "2026-04-19T09:40:00Z" },
+  { id: "e4", agent_id: "b2e8d1c7-22bb-4c6e-9d38-002", side: "long",  entry_price: 3_010.0,  exit_price: 3_044.0,  size_usdt: 300, leverage: 3, pnl:  10.16, strategy: "rsi_reversion", close_reason: "TP",         opened_at: "2026-04-19T16:30:22Z", closed_at: "2026-04-19T17:55:10Z" },
+  // Open short
+  { id: "e5", agent_id: "b2e8d1c7-22bb-4c6e-9d38-002", side: "short", entry_price: 3_051.0,  exit_price: null,     size_usdt: 300, leverage: 3, pnl:  null,  strategy: "rsi_reversion", close_reason: null,         opened_at: "2026-04-20T10:10:00Z", closed_at: null },
+
+  // ── SOL agent — atr_breakout (net positive) ───────────────────────
+  { id: "s1", agent_id: "c3fa2b06-33cc-4d7f-ae49-003", side: "long",  entry_price: 142.10,   exit_price: 145.20,   size_usdt: 200, leverage: 2, pnl:   8.72, strategy: "atr_breakout",  close_reason: "TP",         opened_at: "2026-04-17T19:12:00Z", closed_at: "2026-04-17T22:05:00Z" },
+  { id: "s2", agent_id: "c3fa2b06-33cc-4d7f-ae49-003", side: "long",  entry_price: 144.80,   exit_price: 143.55,   size_usdt: 200, leverage: 2, pnl:  -3.45, strategy: "atr_breakout",  close_reason: "SUPERVISOR", opened_at: "2026-04-18T05:30:00Z", closed_at: "2026-04-18T07:00:00Z" },
+  { id: "s3", agent_id: "c3fa2b06-33cc-4d7f-ae49-003", side: "long",  entry_price: 143.90,   exit_price: 148.00,   size_usdt: 200, leverage: 2, pnl:  11.40, strategy: "atr_breakout",  close_reason: "TP",         opened_at: "2026-04-19T11:00:00Z", closed_at: "2026-04-19T15:20:00Z" },
+
+  // ── BNB agent — vwap_meanrev (halted, net negative: why credits halted) ─
+  { id: "n1", agent_id: "d4fb3c15-44dd-4e80-bf50-004", side: "short", entry_price: 584.00,   exit_price: 581.00,   size_usdt: 150, leverage: 4, pnl:   3.08, strategy: "vwap_meanrev",  close_reason: "TP",         opened_at: "2026-04-19T23:05:00Z", closed_at: "2026-04-20T01:40:00Z" },
+  { id: "n2", agent_id: "d4fb3c15-44dd-4e80-bf50-004", side: "long",  entry_price: 580.00,   exit_price: 573.50,   size_usdt: 150, leverage: 4, pnl:  -6.72, strategy: "vwap_meanrev",  close_reason: "SL",         opened_at: "2026-04-20T02:30:00Z", closed_at: "2026-04-20T03:20:00Z" },
+  { id: "n3", agent_id: "d4fb3c15-44dd-4e80-bf50-004", side: "long",  entry_price: 575.00,   exit_price: 570.10,   size_usdt: 150, leverage: 4, pnl:  -5.11, strategy: "vwap_meanrev",  close_reason: "SL",         opened_at: "2026-04-20T04:05:00Z", closed_at: "2026-04-20T05:12:00Z" },
 ]
 
 export interface DemoLog {
