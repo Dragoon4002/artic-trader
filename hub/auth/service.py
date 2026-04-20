@@ -1,9 +1,8 @@
-"""Auth logic: JWT, password hashing, API key management."""
+"""Auth primitives: JWT, API key hashing, wallet-auth message builder + nonce."""
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 import jwt
 
 from ..config import settings
@@ -24,14 +23,6 @@ def verify_jwt(token: str) -> str:
     return payload["sub"]
 
 
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-
-def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
-
-
 def hash_api_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode()).hexdigest()
 
@@ -40,3 +31,33 @@ def generate_api_key() -> tuple[str, str]:
     """Return (raw_key, hashed_key)."""
     raw = "artic_" + secrets.token_urlsafe(32)
     return raw, hash_api_key(raw)
+
+
+# ── Wallet auth helpers ─────────────────────────────────────────────────────
+
+
+def generate_nonce() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def build_signin_message(
+    *,
+    chain: str,
+    address: str,
+    nonce: str,
+    session_pub: str,
+    session_scope: str,
+    issued_at: datetime,
+    session_expires_at: datetime,
+) -> str:
+    """Canonical sign-in message. Client signs it verbatim."""
+    return (
+        f"{settings.AUTH_MESSAGE_DOMAIN} wants you to sign in with your {chain} account:\n"
+        f"{address}\n"
+        f"\n"
+        f"Session public key: {session_pub}\n"
+        f"Scope: {session_scope}\n"
+        f"Nonce: {nonce}\n"
+        f"Issued At: {issued_at.isoformat()}\n"
+        f"Expires At: {session_expires_at.isoformat()}"
+    )

@@ -15,7 +15,7 @@ from . import registry
 from ..db.models.trade import Trade
 from ..db.models.log_entry import LogEntry
 from ..db.models.user import User
-from ..auth.deps import get_current_user
+from ..auth.deps import get_current_user, require_session_key
 from ..secrets.service import resolve_secrets, store_agent_llm_key
 from ..utils.symbols import normalize_symbol
 from . import service as agent_svc
@@ -78,6 +78,9 @@ class AgentEditRequest(BaseModel):
     llm_model: Optional[str] = None
     leaderboard_opt_in: Optional[bool] = None
 
+# NOTE: display handle is derived at read time from user.init_username (with a
+# shortened-address fallback). No per-agent handle column exists any more.
+
 
 # Fields requiring agent restart to take effect
 RESTART_REQUIRED_FIELDS = {"leverage", "primary_timeframe", "live_mode", "llm_provider"}
@@ -89,7 +92,6 @@ HOT_RELOAD_FIELDS = {"amount_usdt", "tp_pct", "sl_pct", "tp_sl_mode",
 
 class LeaderboardOptInRequest(BaseModel):
     opt_in: bool
-    handle: Optional[str] = None
 
 
 class KillAllRequest(BaseModel):
@@ -120,7 +122,6 @@ def _agent_response(agent: Agent) -> dict:
         "llm_provider": agent.llm_provider,
         "llm_model": agent.llm_model,
         "leaderboard_opt_in": agent.leaderboard_opt_in,
-        "leaderboard_handle": agent.leaderboard_handle,
         "created_at": agent.created_at.isoformat() if agent.created_at else None,
         "updated_at": agent.updated_at.isoformat() if agent.updated_at else None,
     }
@@ -143,7 +144,7 @@ async def _get_owned_agent(db: AsyncSession, agent_id: str, user_id: str) -> Age
 @router.post("/kill-all")
 async def kill_all_agents(
     body: KillAllRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     """Stop ALL agents for authenticated user. Requires {"confirm": "KILL_ALL"}."""
@@ -167,7 +168,7 @@ async def kill_all_agents(
 @router.post("")
 async def create_agent(
     body: CreateAgentRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     """Single unified endpoint: create agent, persist ALL config, spawn immediately."""
@@ -240,7 +241,7 @@ async def get_agent(
 @router.delete("/{agent_id}")
 async def delete_agent(
     agent_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     agent = await _get_owned_agent(db, agent_id, user.id)
@@ -255,7 +256,7 @@ async def delete_agent(
 async def start_agent(
     agent_id: str,
     body: AgentRestartRequest | None = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     """Restart a stopped agent using persisted config. Optional overrides update DB."""
@@ -285,7 +286,7 @@ async def start_agent(
 @router.post("/{agent_id}/stop")
 async def stop_agent(
     agent_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     agent = await _get_owned_agent(db, agent_id, user.id)
@@ -348,7 +349,7 @@ async def agent_logs(
 async def edit_agent(
     agent_id: str,
     body: AgentEditRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     """Update agent config. Running agents: hot-reload or auto-restart as needed."""
@@ -387,27 +388,31 @@ async def edit_agent(
 async def set_leaderboard_opt_in(
     agent_id: str,
     body: LeaderboardOptInRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     agent = await _get_owned_agent(db, agent_id, user.id)
     agent.leaderboard_opt_in = body.opt_in
-    if body.handle:
-        agent.leaderboard_handle = body.handle.strip()[:30]
     await db.commit()
     return {
         "agent_id": agent_id,
         "leaderboard_opt_in": agent.leaderboard_opt_in,
-        "handle": agent.leaderboard_handle,
     }
+
+
+def _shorten_addr(addr: str) -> str:
+    """init1xy…4k9p; safe for empty/short input."""
+    if not addr or len(addr) <= 10:
+        return addr or ""
+    return f"{addr[:6]}…{addr[-4:]}"
+
+
+def _display_owner(user: User) -> str:
+    return user.init_username or _shorten_addr(user.wallet_address)
 
 
 # Separate router for public leaderboard (no /api/agents prefix)
 leaderboard_router = APIRouter(tags=["leaderboard"])
-
-
-def _anonymize_owner(user_id) -> str:
-    return f"trader_{str(user_id)[:8]}"
 
 
 @leaderboard_router.get("/api/leaderboard")
@@ -453,7 +458,8 @@ async def get_leaderboard(
         strategy_counts = Counter(t.strategy for t in trades if t.strategy)
         top_strategy = strategy_counts.most_common(1)[0][0] if strategy_counts else "unknown"
 
-        owner = agent.leaderboard_handle or _anonymize_owner(agent.user_id)
+        owner_user = await db.get(User, agent.user_id)
+        owner = _display_owner(owner_user) if owner_user else ""
 
         entries.append({
             "rank": 0,

@@ -15,10 +15,13 @@ hub/
 ├── docker/                # Container management
 │   ├── manager.py         # Docker SDK create/start/stop/remove
 │   └── ports.py           # Atomic thread-safe port allocation
-├── auth/                  # Authentication
-│   ├── router.py          # /auth/login, /auth/refresh
-│   ├── service.py         # JWT + API key verification
-│   └── deps.py            # get_current_user dependency
+├── auth/                  # Wallet-connect authentication
+│   ├── router.py          # /auth/nonce, /auth/verify, /auth/refresh, /auth/me, /auth/session
+│   ├── service.py         # JWT, nonce, canonical sign-in message
+│   ├── session.py         # session-key issue/verify/revoke + monotonic-nonce guard
+│   ├── initia_names.py    # .init reverse lookup + 24h cache
+│   ├── verifiers/         # chain-pluggable sig verifiers (cosmos_adr36.py for Initia)
+│   └── deps.py            # get_current_user + require_session_key
 ├── internal/              # Agent→Hub push endpoints
 │   └── router.py          # /internal/agents/{id}/status, /trades, /logs
 ├── ws/                    # WebSocket streaming
@@ -37,8 +40,8 @@ hub/
 
 ## Exposes To Clients
 
-- Agent CRUD, status proxy, log streaming (WebSocket)
-- Auth (JWT + API key), secret management
+- Agent CRUD, status proxy, log streaming (WebSocket). State-changing endpoints require session-key headers (`X-Session-Id`, `X-Session-Nonce`, `X-Session-Sig`).
+- Auth: wallet-signature (Initia/Cosmos ADR-36) → JWT + session key; `.init` username resolved at login
 - Market candle cache (`GET /api/market/candles`)
 
 ## Receives From Agents (push-based)

@@ -48,20 +48,9 @@ class HubClient:
         return httpx.AsyncClient(base_url=self.base_url, headers=self._headers(), timeout=30)
 
     # ── Auth ─────────────────────────────────────────────────────────────
-
-    async def login(self, email: str, password: str) -> str:
-        async with self._client() as c:
-            r = await c.post("/auth/login", json={"email": email, "password": password})
-            _raise_for_status(r)
-            self._token = r.json()["access_token"]
-            return self._token
-
-    async def register(self, email: str, password: str) -> str:
-        async with self._client() as c:
-            r = await c.post("/auth/register", json={"email": email, "password": password})
-            _raise_for_status(r)
-            self._token = r.json()["access_token"]
-            return self._token
+    # Email/password login was removed — hub is wallet-connect only.
+    # Non-browser clients pass an API key via HubClient(api_key=...) or a JWT
+    # minted through /auth/verify on the web dashboard via HubClient(token=...).
 
     # ── Agents ───────────────────────────────────────────────────────────
 
@@ -195,14 +184,11 @@ class HubClient:
             _raise_for_status(r)
             return r.json()
 
-    async def set_leaderboard_opt_in(
-        self, agent_id: str, opt_in: bool, handle: Optional[str] = None,
-    ) -> dict:
-        payload: dict = {"opt_in": opt_in}
-        if handle:
-            payload["handle"] = handle
+    async def set_leaderboard_opt_in(self, agent_id: str, opt_in: bool) -> dict:
         async with self._client() as c:
-            r = await c.post(f"/api/agents/{agent_id}/leaderboard", json=payload)
+            r = await c.post(
+                f"/api/agents/{agent_id}/leaderboard", json={"opt_in": opt_in}
+            )
             _raise_for_status(r)
             return r.json()
 

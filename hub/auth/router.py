@@ -1,20 +1,215 @@
-"""Auth endpoints: login, register, refresh, API key generation."""
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
+"""Auth endpoints: wallet nonce/verify, refresh, me, session management."""
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import settings
 from ..db.base import get_session
+from ..db.models.auth_nonce import AuthNonce
+from ..db.models.auth_session_key import AuthSessionKey
 from ..db.models.user import User
-from . import service
-from .deps import get_current_user
+from . import initia_names, service, session as session_svc
+from .deps import get_current_user, require_session_key
+from .verifiers import get_verifier
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-class AuthRequest(BaseModel):
-    email: EmailStr
-    password: str
+# ── Schemas ─────────────────────────────────────────────────────────────────
+
+
+class NonceRequest(BaseModel):
+    address: str = Field(min_length=1)
+    chain: str = Field(min_length=1)
+
+
+class NonceResponse(BaseModel):
+    nonce: str
+    message: str
+    expires_at: str
+
+
+class VerifyRequest(BaseModel):
+    address: str
+    chain: str
+    nonce: str
+    signature: str
+    pubkey: str
+    session_pub: str
+    session_scope: str = "authenticated-actions"
+    session_expires_at: str  # ISO-8601
+
+
+class VerifyResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    session_id: str
+    init_username: Optional[str] = None
+
+
+class MeResponse(BaseModel):
+    id: str
+    wallet_address: str
+    wallet_chain: str
+    init_username: Optional[str] = None
+
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+
+def _assert_chain_supported(chain: str) -> None:
+    supported = {c.strip() for c in settings.AUTH_SUPPORTED_CHAINS.split(",") if c.strip()}
+    if chain not in supported:
+        raise HTTPException(status_code=400, detail=f"Unsupported chain: {chain}")
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+# ── Endpoints ───────────────────────────────────────────────────────────────
+
+
+@router.post("/nonce", response_model=NonceResponse)
+async def issue_nonce(
+    body: NonceRequest,
+    db: AsyncSession = Depends(get_session),
+):
+    _assert_chain_supported(body.chain)
+    # Nonce itself lives in a row; client must also know the exact message it
+    # will sign at /verify. We build it lazily there from the same inputs.
+    nonce = service.generate_nonce()
+    expires_at = _now() + timedelta(seconds=settings.AUTH_NONCE_TTL_SECONDS)
+    row = AuthNonce(
+        address=body.address,
+        chain=body.chain,
+        nonce=nonce,
+        expires_at=expires_at,
+    )
+    db.add(row)
+    await db.commit()
+    # Build a preview message the client can display; the real signed message
+    # also includes session_pub + expires which the client supplies at verify.
+    placeholder = service.build_signin_message(
+        chain=body.chain,
+        address=body.address,
+        nonce=nonce,
+        session_pub="<session_pub>",
+        session_scope="authenticated-actions",
+        issued_at=_now(),
+        session_expires_at=_now() + timedelta(seconds=settings.AUTH_SESSION_TTL_SECONDS),
+    )
+    return NonceResponse(
+        nonce=nonce,
+        message=placeholder,
+        expires_at=expires_at.isoformat(),
+    )
+
+
+@router.post("/verify", response_model=VerifyResponse)
+async def verify_signature(
+    body: VerifyRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_session),
+):
+    _assert_chain_supported(body.chain)
+
+    nonce_row = await db.execute(
+        select(AuthNonce).where(
+            AuthNonce.nonce == body.nonce,
+            AuthNonce.address == body.address,
+            AuthNonce.chain == body.chain,
+        )
+    )
+    nonce_row = nonce_row.scalar_one_or_none()
+    if not nonce_row or nonce_row.used_at is not None or nonce_row.expires_at <= _now():
+        raise HTTPException(status_code=401, detail="Invalid or expired nonce")
+
+    try:
+        session_expires = datetime.fromisoformat(body.session_expires_at)
+        if session_expires.tzinfo is None:
+            session_expires = session_expires.replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid session_expires_at")
+    if session_expires <= _now():
+        raise HTTPException(status_code=400, detail="session_expires_at in the past")
+    max_expiry = _now() + timedelta(seconds=settings.AUTH_SESSION_TTL_SECONDS)
+    if session_expires > max_expiry:
+        session_expires = max_expiry
+
+    message = service.build_signin_message(
+        chain=body.chain,
+        address=body.address,
+        nonce=body.nonce,
+        session_pub=body.session_pub,
+        session_scope=body.session_scope,
+        issued_at=nonce_row.created_at,
+        session_expires_at=session_expires,
+    )
+
+    verifier = get_verifier(body.chain)
+    if not verifier or not verifier(body.address, message, body.signature, body.pubkey):
+        raise HTTPException(status_code=401, detail="Signature verification failed")
+
+    nonce_row.used_at = _now()
+
+    # Upsert user
+    existing = await db.execute(
+        select(User).where(
+            User.wallet_address == body.address,
+            User.wallet_chain == body.chain,
+        )
+    )
+    user = existing.scalar_one_or_none()
+    init_name = await initia_names.resolve_init_name(body.address)
+    if user is None:
+        user = User(
+            wallet_address=body.address,
+            wallet_chain=body.chain,
+            init_username=init_name,
+            init_username_resolved_at=_now(),
+        )
+        db.add(user)
+        await db.flush()
+    else:
+        if init_name or initia_names.is_stale(user.init_username_resolved_at):
+            user.init_username = init_name
+            user.init_username_resolved_at = _now()
+
+    sess = AuthSessionKey(
+        user_id=user.id,
+        session_pub=body.session_pub,
+        scope=body.session_scope,
+        expires_at=session_expires,
+        last_nonce=0,
+    )
+    db.add(sess)
+    await db.commit()
+    await db.refresh(user)
+    await db.refresh(sess)
+
+    # Refresh token = long-lived JWT in httpOnly cookie. Rotate on every use.
+    refresh_token = service.create_jwt(user.id)
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 30,
+    )
+
+    return VerifyResponse(
+        access_token=service.create_jwt(user.id),
+        session_id=sess.id,
+        init_username=user.init_username,
+    )
 
 
 class TokenResponse(BaseModel):
@@ -22,33 +217,84 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-@router.post("/register", response_model=TokenResponse)
-async def register(body: AuthRequest, db: AsyncSession = Depends(get_session)):
-    existing = await db.execute(select(User).where(User.email == body.email))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Email already registered")
-    user = User(email=body.email, password_hash=service.hash_password(body.password))
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return TokenResponse(access_token=service.create_jwt(user.id))
-
-
-@router.post("/login", response_model=TokenResponse)
-async def login(body: AuthRequest, db: AsyncSession = Depends(get_session)):
-    result = await db.execute(select(User).where(User.email == body.email))
-    user = result.scalar_one_or_none()
-    if not user or not service.verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    return TokenResponse(access_token=service.create_jwt(user.id))
-
-
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(user: User = Depends(get_current_user)):
+async def refresh(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+):
+    cookie_token = request.cookies.get("refresh_token")
+    if not cookie_token:
+        raise HTTPException(status_code=401, detail="Missing refresh cookie")
+    try:
+        user_id = service.verify_jwt(cookie_token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
     return TokenResponse(access_token=service.create_jwt(user.id))
 
 
-# API key management
+@router.get("/me", response_model=MeResponse)
+async def me(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    # Background refresh of .init if stale
+    if initia_names.is_stale(user.init_username_resolved_at):
+        fresh = await initia_names.resolve_init_name(user.wallet_address)
+        user.init_username = fresh
+        user.init_username_resolved_at = _now()
+        await db.commit()
+        await db.refresh(user)
+    return MeResponse(
+        id=user.id,
+        wallet_address=user.wallet_address,
+        wallet_chain=user.wallet_chain,
+        init_username=user.init_username,
+    )
+
+
+@router.get("/session")
+async def list_sessions(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    rows = await db.execute(
+        select(AuthSessionKey).where(AuthSessionKey.user_id == user.id).order_by(
+            AuthSessionKey.created_at.desc()
+        )
+    )
+    return [
+        {
+            "session_id": s.id,
+            "scope": s.scope,
+            "expires_at": s.expires_at.isoformat(),
+            "revoked_at": s.revoked_at.isoformat() if s.revoked_at else None,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in rows.scalars().all()
+    ]
+
+
+@router.delete("/session")
+async def revoke_current_session(
+    response: Response,
+    request: Request,
+    user: User = Depends(require_session_key),
+    db: AsyncSession = Depends(get_session),
+):
+    session_id = request.headers.get("X-Session-Id", "")
+    sess = await session_svc.load_active_session(db, session_id, user.id)
+    if sess:
+        await session_svc.revoke_session(db, sess)
+    response.delete_cookie("refresh_token")
+    return {"revoked": True}
+
+
+# ── API key management (unchanged) ──────────────────────────────────────────
+
 
 class ApiKeyResponse(BaseModel):
     api_key: str
@@ -59,7 +305,7 @@ api_keys_router = APIRouter(prefix="/api/keys", tags=["keys"])
 
 @api_keys_router.post("", response_model=ApiKeyResponse)
 async def generate_key(
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_session_key),
     db: AsyncSession = Depends(get_session),
 ):
     raw, hashed = service.generate_api_key()

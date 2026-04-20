@@ -7,6 +7,8 @@ from .log_entry import LogEntry
 from .market_cache import MarketCache
 from .secret import UserSecret, AgentSecretOverride
 from .onchain import OnchainDecision, OnchainTrade
+from .auth_nonce import AuthNonce
+from .auth_session_key import AuthSessionKey
 
 __all__ = [
     "Base",
@@ -19,4 +21,6 @@ __all__ = [
     "AgentSecretOverride",
     "OnchainDecision",
     "OnchainTrade",
+    "AuthNonce",
+    "AuthSessionKey",
 ]

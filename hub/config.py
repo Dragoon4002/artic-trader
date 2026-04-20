@@ -12,6 +12,15 @@ class Settings(BaseSettings):
     PRICE_POLL_SECONDS: float = 2.0
     HUB_PORT: int = 8000
 
+    # Wallet auth
+    AUTH_MESSAGE_DOMAIN: str = "artic.trade"
+    AUTH_NONCE_TTL_SECONDS: int = 300
+    AUTH_SESSION_TTL_SECONDS: int = 28800  # 8h
+    AUTH_SUPPORTED_CHAINS: str = "initia-testnet"  # comma-separated
+
+    # Initia .init name service
+    INITIA_NAME_SERVICE_URL: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

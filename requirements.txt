@@ -17,7 +17,8 @@ alembic
 psycopg2-binary  # alembic migrations only (sync driver)
 pyyaml  # scripts/dump_openapi.py
 PyJWT
-passlib[bcrypt]
+ecdsa           # secp256k1 verify for Cosmos ADR-36 + session-key sigs
+bech32          # address derivation for ADR-36 verifier
 docker
 websockets
 

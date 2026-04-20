@@ -34,9 +34,8 @@ class Agent(Base):
     llm_provider: Mapped[str | None] = mapped_column(String, nullable=True)
     llm_model: Mapped[str | None] = mapped_column(String, nullable=True)
 
-    # Leaderboard
+    # Leaderboard (display name comes from user.init_username or shortened address)
     leaderboard_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
-    leaderboard_handle: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Runtime state (set by hub, not user)
     status: Mapped[str] = mapped_column(String, default="stopped")
