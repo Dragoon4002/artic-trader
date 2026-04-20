@@ -62,6 +62,12 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-server-db:5432/${POSTGRES_DB}
       HUB_URL: http://hub:9000
+      HUB_SECRET: ${HUB_SECRET:-artic-dev-hub-secret}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-artic-dev-internal-secret}
+      AGENT_IMAGE: ${AGENT_IMAGE:-artic-app:dev}
+      AGENT_NETWORK: artic-dev
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # spawner needs host Docker
     depends_on:
       user-server-db:
         condition: service_healthy
