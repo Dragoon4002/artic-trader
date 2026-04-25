@@ -88,12 +88,15 @@ app = FastAPI(title="Artic Hub", version="0.1.0-alpha", lifespan=lifespan)
 install_error_handlers(app)
 
 app.add_middleware(WakeProxyMiddleware, vm_service=vm_service, forwarder=forwarder)
+import os as _os
+_cors_extra = [o.strip() for o in _os.getenv("CORS_ALLOW_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        *_cors_extra,
     ],
     allow_credentials=True,
     allow_methods=["*"],

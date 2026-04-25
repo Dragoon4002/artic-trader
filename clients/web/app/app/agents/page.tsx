@@ -374,8 +374,3 @@ function toneClass(v: number) {
   return "text-foreground/75"
 }
 
-function fmt(v: number) {
-  const abs = Math.abs(v)
-  const sign = v > 0 ? "+" : v < 0 ? "-" : ""
-  return `${sign}${abs.toFixed(2)}`
-}

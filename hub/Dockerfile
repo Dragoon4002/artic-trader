@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY hub/ ./hub/
 
 EXPOSE 9000
-CMD ["python", "-m", "hub.server"]
+CMD ["sh", "-c", "alembic -c hub/alembic.ini upgrade head && python -m hub.server"]

@@ -13,6 +13,7 @@ import { useAgent, useDeleteAgent, useLogs, useStartAgent, useStopAgent, useTrad
 import { useHubAuth } from "@/hooks/use-hub-auth"
 import type { AgentStatusT, LogLevelT } from "@/lib/schemas"
 import { explorerTxUrl, shortHash } from "@/lib/chain"
+import { usdToInit } from "@/lib/currency"
 
 const STATUS_TONE: Record<AgentStatusT, string> = {
   alive: "text-[var(--color-teal)] bg-[var(--color-teal)]/12",
@@ -225,9 +226,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               agent.unrealised_pnl == null ? (
                 <span className="text-foreground/40">—</span>
               ) : agent.unrealised_pnl >= 0 ? (
-                <span className="text-[var(--color-teal)]">+{agent.unrealised_pnl.toFixed(2)} INIT</span>
+                <span className="text-[var(--color-teal)]">+{usdToInit(agent.unrealised_pnl).toFixed(2)} INIT</span>
               ) : (
-                <span className="text-[var(--color-red-light)]">{agent.unrealised_pnl.toFixed(2)} INIT</span>
+                <span className="text-[var(--color-red-light)]">{usdToInit(agent.unrealised_pnl).toFixed(2)} INIT</span>
               )
             }
           />
@@ -236,7 +237,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         </Card>
 
         <Card title="Config">
-          <Kv label="Amount" value={`${agent.amount_usdt} INIT`} />
+          <Kv label="Amount" value={`${usdToInit(agent.amount_usdt).toFixed(2)} INIT`} />
           <Kv label="Leverage" value={`${agent.leverage}×`} />
           <Kv
             label="TP / SL"
@@ -260,9 +261,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               closedPnls.length === 0 ? (
                 <span className="text-foreground/40">—</span>
               ) : totalPnl >= 0 ? (
-                <span className="text-[var(--color-teal)]">+{totalPnl.toFixed(2)} INIT</span>
+                <span className="text-[var(--color-teal)]">+{usdToInit(totalPnl).toFixed(2)} INIT</span>
               ) : (
-                <span className="text-[var(--color-red-light)]">{totalPnl.toFixed(2)} INIT</span>
+                <span className="text-[var(--color-red-light)]">{usdToInit(totalPnl).toFixed(2)} INIT</span>
               )
             }
           />
@@ -315,14 +316,14 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                   <td className="py-2.5 pr-3 font-mono text-foreground/70">
                     {t.exit_price ?? <span className="text-foreground/30">open</span>}
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-foreground/70">{t.size_usdt}</td>
+                  <td className="py-2.5 pr-3 font-mono text-foreground/70">{usdToInit(t.size_usdt).toFixed(2)}</td>
                   <td className="py-2.5 pr-3 font-mono">
                     {t.pnl == null ? (
                       <span className="text-foreground/30">—</span>
                     ) : t.pnl >= 0 ? (
-                      <span className="text-[var(--color-teal)]">+{t.pnl.toFixed(2)}</span>
+                      <span className="text-[var(--color-teal)]">+{usdToInit(t.pnl).toFixed(2)}</span>
                     ) : (
-                      <span className="text-[var(--color-red-light)]">{t.pnl.toFixed(2)}</span>
+                      <span className="text-[var(--color-red-light)]">{usdToInit(t.pnl).toFixed(2)}</span>
                     )}
                   </td>
                   <td className="py-2.5 pr-3 text-[11px] uppercase tracking-wider text-foreground/50">
