@@ -6,7 +6,7 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, inspect, pool, text
 
 from hub.db import models  # noqa: F401 — register model metadata
 from hub.db.base import Base
@@ -57,9 +57,40 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
+        _adopt_existing_schema(connection)
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
+
+
+def _adopt_existing_schema(connection) -> None:
+    # Render/Neon DBs were provisioned before alembic_version existed. If
+    # core tables already exist but alembic has no recorded head, stamp the
+    # latest revision so `upgrade head` is a no-op instead of re-CREATE.
+    insp = inspect(connection)
+    tables = set(insp.get_table_names())
+    if "users" not in tables:
+        return
+    if "alembic_version" in tables:
+        row = connection.execute(text("SELECT 1 FROM alembic_version LIMIT 1")).first()
+        if row is not None:
+            return
+    else:
+        connection.execute(
+            text(
+                "CREATE TABLE alembic_version ("
+                "version_num VARCHAR(32) NOT NULL, "
+                "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+            )
+        )
+    from alembic.script import ScriptDirectory
+
+    head = ScriptDirectory.from_config(config).get_current_head()
+    connection.execute(
+        text("INSERT INTO alembic_version (version_num) VALUES (:v)"), {"v": head}
+    )
+    if hasattr(connection, "commit"):
+        connection.commit()
 
 
 if context.is_offline_mode():

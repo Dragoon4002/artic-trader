@@ -107,9 +107,9 @@ Artic is a production-ready, LLM-orchestrated trading platform. A central **Hub*
           └──────────────┬────────────────────────┘
                          ▼
           ┌──────────────────────────┐
-          │   HashKey Chain (EVM)    │
-          │   DecisionLogger.sol     │
-          │   TradeLogger.sol        │
+          │  Initia Rollup (artic-1) │
+          │   MiniEVM · DecisionLogger│
+          │   MiniEVM · TradeLogger   │
           └──────────────────────────┘
 ```
 
@@ -172,8 +172,8 @@ hashkey/
 │   ├── engine.py               # Main trading loop orchestration
 │   ├── log_buffer.py           # Circular in-memory log buffer (1000 entries)
 │   ├── hub_callback.py         # Push status/trades/logs to hub
-│   ├── onchain_logger.py       # Log decisions to HashKey Chain (DecisionLogger)
-│   ├── onchain_trade_logger.py # Log trades to HashKey Chain (TradeLogger)
+│   ├── onchain_logger.py       # Log decisions to Initia rollup (DecisionLogger)
+│   ├── onchain_trade_logger.py # Log trades to Initia rollup (TradeLogger)
 │   ├── market/
 │   │   ├── market.py           # Fetch candles from hub cache
 │   │   ├── pyth_client.py      # Pyth Hermes live prices (27 symbols)
@@ -345,7 +345,7 @@ Each agent container runs an independent FastAPI app with its own trading loop, 
 | `schemas.py` | `Candle`, `StrategyPlan`, `TradeEvent`, `AgentStatus`, `LogEntry`, `RiskParams` — shared Pydantic types |
 | `log_buffer.py` | `LogBuffer` — thread-safe circular deque (1000 entries); append with level + timestamp |
 | `hub_callback.py` | `HubCallback.push_status()`, `.push_trade()`, `.push_logs()` — fire-and-forget async HTTP to hub's `/internal` endpoints with `X-Internal-Secret` header |
-| `onchain_logger.py` | `OnchainLogger.log_decision()` — builds `sessionId` / `symbolBytes` / `reasoningHash` via keccak256, submits `logDecision()` tx to HashKey Chain; runs in thread pool to avoid blocking event loop |
+| `onchain_logger.py` | `OnchainLogger.log_decision()` — builds `sessionId` / `symbolBytes` / `reasoningHash` via keccak256, submits `logDecision()` tx to Initia rollup; runs in thread pool to avoid blocking event loop |
 | `onchain_trade_logger.py` | `OnchainTradeLogger.log_trade()` — scales prices by `1e8`, hashes JSON detail, submits `logTrade()` tx; disabled gracefully if `deployed.json` not found |
 | `market/market.py` | `MarketClient.get_candles()` — fetches from hub's `/api/market/candles` (never direct TwelveData calls) |
 | `market/pyth_client.py` | `PythClient.get_price()` / `.get_prices_batch()` — calls Pyth Hermes REST; 27 crypto feed IDs hardcoded; 3 retries, 0.3s backoff |
@@ -513,7 +513,20 @@ Static marketing and documentation site. Dark-only design with an orange/red/tea
 
 ## Smart Contracts
 
-The platform logs all LLM trading decisions and trade executions permanently to **HashKey Chain** using two Solidity event-emitting contracts. All sensitive data is stored as keccak256 hashes — only derived hashes and numeric metrics touch the chain.
+The platform logs all LLM trading decisions and trade executions permanently to its own **Initia EVM rollup** (`artic-1`) using two Solidity event-emitting contracts. All sensitive data is stored as keccak256 hashes — only derived hashes and numeric metrics touch the chain.
+
+### Initia Rollup Details
+
+| Field | Value |
+|-------|-------|
+| **Rollup Name** | Artic |
+| **Chain ID** | `artic-1` |
+| **VM** | MiniEVM (Initia EVM rollup) |
+| **L1** | Initia (`initiation-2` testnet) |
+| **RPC URL** | Set via `INITIA_RPC_URL` (e.g. `http://localhost:8545` after `weave init`) |
+| **Explorer** | `https://scan.testnet.initia.xyz/artic-1/` |
+| **Auto-signing** | InterwovenKit session keys — agent submits log txs without per-tx wallet popups |
+| **Identity** | Initia Usernames (`.init`) surfaced wherever the wallet is shown |
 
 ---
 
@@ -647,11 +660,14 @@ contract TradeLogger {
 
 #### `contracts/deploy.py` — Deploy DecisionLogger
 
-```python
-"""Deploy DecisionLogger to HashKey Chain."""
+```bash
 # Requirements: pip install web3 py-solc-x
-# Env vars:     HSK_RPC_URL, HSK_PRIVATE_KEY
+# Env vars: INITIA_RPC_URL, INITIA_PRIVATE_KEY, INITIA_CHAIN_ID
+# (legacy CHAIN_* and HSK_* are still honored as fallbacks)
 
+INITIA_RPC_URL=http://localhost:8545 \
+INITIA_PRIVATE_KEY=<deployer key> \
+INITIA_CHAIN_ID=artic-1 \
 python3 contracts/deploy.py
 # Output: contracts/deployed.json
 ```
@@ -659,15 +675,14 @@ python3 contracts/deploy.py
 Steps performed:
 1. Installs `solc 0.8.20` via `py-solc-x`
 2. Compiles `DecisionLogger.sol`
-3. Connects to `HSK_RPC_URL`
-4. Signs + broadcasts deployment tx from `HSK_PRIVATE_KEY`
+3. Connects to `INITIA_RPC_URL`
+4. Signs + broadcasts deployment tx from `INITIA_PRIVATE_KEY`
 5. Waits for receipt (blocks until mined)
 6. Writes `contracts/deployed.json` with address, ABI, tx_hash, block_number
 
 #### `contracts/deploy_trade_logger.py` — Deploy TradeLogger
 
-```python
-"""Deploy TradeLogger to HashKey Chain."""
+```bash
 python3 contracts/deploy_trade_logger.py
 # Output: contracts/trade_logger_deployed.json
 ```
@@ -678,21 +693,25 @@ Same steps as above, produces `contracts/trade_logger_deployed.json`.
 
 ### Deployed Addresses
 
-**Network:** HashKey Chain Testnet (`https://testnet.hsk.xyz`)
+**Network:** Initia EVM Rollup (`artic-1`)
+**L1:** Initia testnet (`initiation-2`)
+**Explorer base:** `https://scan.testnet.initia.xyz/artic-1/`
 **Deployer:** `0xbEff58504eB09E3Bb3edC68e81250c71D3f8c0f5`
 **Deployed:** 2026-04-15
 
 | Contract | Address | Deploy Tx | Block |
 |----------|---------|-----------|-------|
-| `DecisionLogger` | `0x70a15Db526104abC2f021b7c690cd89a07EDE49C` | `2d72a182ce20453680396e6561fc948276dcce416b2844f6c460c5234f1264dd` | 26543461 |
-| `TradeLogger` | `0xeeb56334152D6bDB62aacF56f8DbCceA5210b78D` | `a159d64f5bb1dfcd2ce88d50255a4f71f6b0280607a1f802ed7899268b3cb16c` | 26543465 |
+| `DecisionLogger` | [`0x70a15Db526104abC2f021b7c690cd89a07EDE49C`](https://scan.testnet.initia.xyz/artic-1/address/0x70a15Db526104abC2f021b7c690cd89a07EDE49C) | `0x2d72a182ce20453680396e6561fc948276dcce416b2844f6c460c5234f1264dd` | 26543461 |
+| `TradeLogger` | [`0xeeb56334152D6bDB62aacF56f8DbCceA5210b78D`](https://scan.testnet.initia.xyz/artic-1/address/0xeeb56334152D6bDB62aacF56f8DbCceA5210b78D) | `0xa159d64f5bb1dfcd2ce88d50255a4f71f6b0280607a1f802ed7899268b3cb16c` | 26543465 |
 
 **Verification txs (post-deploy test calls):**
 
 | Call | Tx Hash | Result |
 |------|---------|--------|
-| `DecisionLogger.logDecision()` | `d1e9fd4bf2c02c8f3f6197b675f8f7edf3096e46b59dbdac7673e3f1b6d90072` | `DecisionLogged` event emitted — action=1 (OPEN_LONG), confidence=85 |
-| `TradeLogger.logTrade()` | `138cac10c95f8c985f90ed250511ad437f168427c5b959f2b2fead33e50fa6b9` | `TradeLogged` event emitted — side=0 (OPEN_LONG), entryPrice=6500000000000 |
+| `DecisionLogger.logDecision()` | `0xd1e9fd4bf2c02c8f3f6197b675f8f7edf3096e46b59dbdac7673e3f1b6d90072` | `DecisionLogged` event emitted — action=1 (OPEN_LONG), confidence=85 |
+| `TradeLogger.logTrade()` | `0x138cac10c95f8c985f90ed250511ad437f168427c5b959f2b2fead33e50fa6b9` | `TradeLogged` event emitted — side=0 (OPEN_LONG), entryPrice=6500000000000 |
+
+ABI + address are also persisted to `contracts/deployed.json` and `contracts/trade_logger_deployed.json` (auto-generated by deploy scripts) and consumed at runtime by `app/onchain_logger.py` / `app/onchain_trade_logger.py`.
 
 ---
 
@@ -831,7 +850,7 @@ await self._trade_logger.log_trade(
 | `id` | UUID PK | |
 | `agent_id` | UUID FK → agents | |
 | `session_id` | VARCHAR | keccak256 hex |
-| `tx_hash` | VARCHAR | HashKey Chain tx hash |
+| `tx_hash` | VARCHAR | Initia rollup tx hash |
 | `block_number` | INTEGER | |
 | `reasoning_text` | TEXT | Full LLM reasoning (off-chain copy) |
 | `created_at` | TIMESTAMP | |
@@ -897,7 +916,7 @@ Client          Hub                    DB
 | Hub | TwelveData | REST | API key | OHLCV candles, 8 req/min rate limit |
 | Agent | LLM provider | REST | API key | Strategy selection, risk analysis |
 | Hub | PostgreSQL | SQL | DB credentials | All persistent state |
-| Agent | HashKey Chain | RPC | Private key | `logDecision()`, `logTrade()` |
+| Agent | Initia rollup (`artic-1`) | EVM JSON-RPC | Private key (or session-key grantee) | `logDecision()`, `logTrade()` |
 
 ### Port Map
 
@@ -936,14 +955,17 @@ JWT_SECRET=<random 40+ char>        # JWT signing key
 # ── Telegram Bot ─────────────────────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN=
 
-# ── HashKey Global Exchange (live trading) ───────────────────────────────────
+# ── HashKey Global Exchange (live trading, optional) ─────────────────────────
 HASHKEY_API_KEY=
 HASHKEY_SECRET=
 HASHKEY_SANDBOX=true
 
-# ── HashKey Chain On-chain Logging ───────────────────────────────────────────
-HSK_RPC_URL=https://testnet.hsk.xyz
-HSK_PRIVATE_KEY=<deployer private key>
+# ── Initia Rollup On-chain Logging ───────────────────────────────────────────
+INITIA_RPC_URL=                        # Rollup EVM JSON-RPC (e.g. http://localhost:8545)
+INITIA_PRIVATE_KEY=                    # Deployer / platform wallet
+INITIA_CHAIN_ID=artic-1                # Rollup chain ID from `weave init`
+INITIA_EXPLORER_BASE=https://scan.testnet.initia.xyz
+# Legacy CHAIN_* / HSK_* env vars are still honored as fallbacks
 ```
 
 ---
@@ -1006,9 +1028,10 @@ npm start
 ### 6. Deploy Smart Contracts
 
 ```bash
-# Set env vars
-export HSK_RPC_URL=https://testnet.hsk.xyz
-export HSK_PRIVATE_KEY=<your_key>
+# Set env vars (Initia rollup)
+export INITIA_RPC_URL=http://localhost:8545      # or your rollup's EVM RPC
+export INITIA_PRIVATE_KEY=<your_key>
+export INITIA_CHAIN_ID=artic-1
 
 # Deploy both contracts
 python3 contracts/deploy.py
@@ -1059,7 +1082,7 @@ python -m clients.telegram
 ## Tests
 
 **Framework:** `pytest` with `pytest-asyncio`
-**Mock policy:** All external APIs (Pyth, TwelveData, LLM, Docker, HashKey Chain) are mocked — no real network calls in tests.
+**Mock policy:** All external APIs (Pyth, TwelveData, LLM, Docker, Initia rollup) are mocked — no real network calls in tests.
 
 ```bash
 # Run all tests
@@ -1134,7 +1157,7 @@ The LLM doesn't write code — it selects from a fixed, auditable library of 30+
 The hub owns the TwelveData budget (8 req/min on free tier). Agents fetch candles from the hub cache — never from TwelveData directly. This prevents multiple agents from exhausting the quota simultaneously.
 
 ### Audit Trail
-Every LLM decision and trade event is hashed and emitted on HashKey Chain via `DecisionLogger` and `TradeLogger`. The full reasoning text is stored off-chain in PostgreSQL and linked via `keccak256` hash. Immutable provenance, private content.
+Every LLM decision and trade event is hashed and emitted on Initia rollup via `DecisionLogger` and `TradeLogger`. The full reasoning text is stored off-chain in PostgreSQL and linked via `keccak256` hash. Immutable provenance, private content.
 
 ### Async First
 FastAPI + SQLAlchemy async + asyncpg throughout. The trading loop is a single async task. On-chain tx submission runs in `run_in_executor()` to avoid blocking the event loop.
@@ -1155,7 +1178,7 @@ All database queries in the hub filter by `user_id`. The `onlyOwner` modifier in
 | Trading strategies | 30+ |
 | LLM providers supported | 4 (OpenAI, Anthropic, DeepSeek, Gemini) |
 | Clients | 4 (TUI, CLI, Telegram, Web) |
-| On-chain network | HashKey Chain (EVM) |
+| On-chain network | Initia rollup (EVM) |
 | Smart contracts | 2 (DecisionLogger, TradeLogger) |
 | API endpoints (approx) | 50+ |
 | Hub port | 9000 |

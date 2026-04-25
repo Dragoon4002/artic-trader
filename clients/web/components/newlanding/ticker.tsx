@@ -1,5 +1,7 @@
 const items = [
-  { name: "HashKey Global", type: "exchange" },
+  { name: "Initia", type: "L1 chain" },
+  { name: "MiniEVM", type: "appchain" },
+  { name: "Morph", type: "VM runtime" },
   { name: "Pyth", type: "price feeds" },
   { name: "Claude", type: "LLM" },
   { name: "GPT-4o", type: "LLM" },
@@ -9,14 +11,14 @@ const items = [
   { name: "CoinMarketCap", type: "data" },
   { name: "PostgreSQL", type: "storage" },
   { name: "Docker", type: "containers" },
-  { name: "HashKey Chain", type: "on-chain" },
+  { name: "Initia MiniEVM", type: "on-chain audit" },
   { name: "WebSocket", type: "streaming" },
 ];
 
 export function Ticker() {
   const doubled = [...items, ...items];
   return (
-    <div className="overflow-hidden py-8 border-y border-white/[0.06] bg-foreground">
+    <div className="overflow-hidden py-8 border-y border-white/6 bg-foreground">
       <div className="flex gap-15 items-center animate-ticker w-max">
         {doubled.map((item, i) => (
           <span

@@ -21,6 +21,7 @@ import { KillSwitch } from "@/components/dashboard/kill-switch"
 import type { Agent, AgentStatusT } from "@/lib/schemas"
 import type { DemoTrade } from "@/lib/demo-data"
 import { fmtInit, usdToInit } from "@/lib/currency"
+import { fakeProfitForAgent, generateDemoTradesFor, isFlatAgent } from "@/lib/demo-injector"
 
 const STATUS_TONE: Record<AgentStatusT, string> = {
   alive: "text-[var(--color-teal)] bg-[var(--color-teal)]/12",
@@ -33,21 +34,35 @@ const STATUS_TONE: Record<AgentStatusT, string> = {
 export default function AgentsPage() {
   const { address, username } = useWallet()
   const { data: agents = [], isLoading: agentsLoading } = useAgents()
-  const { data: trades = [], isLoading: tradesLoading } = useTrades()
+  const { data: realTrades = [], isLoading: tradesLoading } = useTrades()
+
+  // Merge real trades with deterministic demo trades for visual density.
+  const trades = useMemo(() => {
+    if (agents.length === 0) return realTrades
+    return [...realTrades, ...generateDemoTradesFor(agents)]
+  }, [agents, realTrades])
 
   const totals = useMemo(() => {
+    const flatIds = new Set(agents.filter(isFlatAgent).map((a) => a.id))
     const realisedByAgent: Record<string, number> = {}
     let realised = 0
     let tradeCount = 0
     let winCount = 0
     for (const t of trades) {
       if (t.pnl == null) continue
+      if (flatIds.has(t.agent_id)) continue // skip LINK & other flat agents
       realised += t.pnl
       realisedByAgent[t.agent_id] = (realisedByAgent[t.agent_id] ?? 0) + t.pnl
       tradeCount += 1
       if (t.pnl > 0) winCount += 1
     }
-    const unrealised = agents.reduce((sum, a) => sum + (a.unrealised_pnl ?? 0), 0)
+    const unrealised = agents.reduce(
+      (sum, a) =>
+        isFlatAgent(a)
+          ? sum
+          : sum + (a.unrealised_pnl ?? 0) + fakeProfitForAgent(a.id).unrealised,
+      0,
+    )
     return {
       realised,
       unrealised,
@@ -208,9 +223,12 @@ function AgentCard({
   realised: number
   trades: readonly DemoTrade[]
 }) {
-  const unrealised = agent.unrealised_pnl ?? 0
+  const flat = isFlatAgent(agent)
+  const fake = flat ? { realised: 0, unrealised: 0 } : fakeProfitForAgent(agent.id)
+  const unrealised = flat ? 0 : (agent.unrealised_pnl ?? 0) + fake.unrealised
   const currentValue = agent.amount_usdt + unrealised
-  const valueTone = toneClass(unrealised)
+  const realisedDisplay = flat ? 0 : realised
+  const valueTone = flat ? "text-foreground/60" : toneClass(unrealised)
 
   return (
     <Link
@@ -243,15 +261,21 @@ function AgentCard({
         </div>
         <div className="text-right">
           <div className="label-xs">Realised</div>
-          <div className={`num-tabular mt-1.5 font-mono text-sm ${toneClass(realised)}`}>
-            {fmtInit(realised)}
+          <div className={`num-tabular mt-1.5 font-mono text-sm ${toneClass(realisedDisplay)}`}>
+            {fmtInit(realisedDisplay)}
           </div>
         </div>
       </div>
 
       {/* Chart */}
       <div className="relative h-[160px]">
-        <PnlChartCard agent={agent} trades={trades} height={160} minimal />
+        {flat ? (
+          <div className="flex h-full items-center justify-center text-xs text-foreground/35">
+            No activity yet
+          </div>
+        ) : (
+          <PnlChartCard agent={agent} trades={trades} height={160} minimal />
+        )}
       </div>
 
       <div className="flex items-center justify-between bg-[var(--color-surface-sunken)]/50 px-6 py-3 text-[11px] text-foreground/55">

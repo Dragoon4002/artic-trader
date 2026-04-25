@@ -88,13 +88,13 @@ function StepCard({ step, index }: { step: Step; index: number }) {
       {/* Image (middle card) */}
       {hasImage && (
         <div className="absolute inset-0 -z-10">
-          <Image
+          {/* <Image
             src={step.image!}
             alt=""
             fill
             className="object-cover object-center opacity-40"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/70" />
+          /> */}
+          <div className="absolute inset-0 bg-[#151B21]"/> {/*bg-gradient-to-b from-black/30 via-black/40 to-black/70" */}
         </div>
       )}
 

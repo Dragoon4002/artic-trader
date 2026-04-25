@@ -2,22 +2,21 @@
 
 import { PropsWithChildren, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useWallet } from "@/hooks/use-wallet"
+import { useHubAuth } from "@/hooks/use-hub-auth"
 
 /**
- * Client-side redirect to /connect when no wallet is connected. InterwovenKit
- * state only exists in the browser, so this can't be a middleware guard.
- * Renders nothing while unverified to avoid a flicker.
+ * Redirect to /connect when there's no hub-auth JWT. InterwovenKit wallet is
+ * optional; the actual gate is the JWT in localStorage.
  */
 export function AuthGuard({ children }: PropsWithChildren) {
   const router = useRouter()
-  const { isConnected } = useWallet()
+  const { token, hydrated } = useHubAuth()
 
   useEffect(() => {
-    if (!isConnected) router.replace("/connect")
-  }, [isConnected, router])
+    if (hydrated && !token) router.replace("/connect")
+  }, [hydrated, token, router])
 
-  if (!isConnected) {
+  if (!hydrated || !token) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-foreground/50">
         Redirecting…

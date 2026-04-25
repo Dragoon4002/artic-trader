@@ -1,12 +1,13 @@
 {
   "project_name": "Artic",
   "repo_url": "https://github.com/Dragoon4002/artic-trader",
-  "commit_sha": "2460f7c6f07a5b3195154fa96f12b8b4fedea798",
+  "commit_sha": "6f08c6748b41ddaa78cfcc6bd867e1e5f968b874",
   "rollup_chain_id": "artic-1",
   "deployed_address": "0x70a15Db526104abC2f021b7c690cd89a07EDE49C",
   "vm": "evm",
   "native_feature": "auto-signing",
   "core_logic_path": "app/engine.py",
-  "native_feature_frontend_path": "clients/web/hooks/use-hub-auth.ts",
-  "demo_video_url": "https://youtu.be/PLACEHOLDER"
+  "native_feature_frontend_path": "clients/web/app/app/settings/page.tsx",
+  "demo_video_url": "https://youtu.be/_mTBOjFe1WI"
 }
+
