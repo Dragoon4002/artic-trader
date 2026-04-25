@@ -1,7 +1,7 @@
 {
   "project_name": "Artic",
   "repo_url": "https://github.com/Dragoon4002/artic-trader",
-  "commit_sha": "6f08c6748b41ddaa78cfcc6bd867e1e5f968b874",
+  "commit_sha": "e074045be39fbc515ed7a526b6b6bba0bbcd20d5",
   "rollup_chain_id": "artic-1",
   "deployed_address": "0x70a15Db526104abC2f021b7c690cd89a07EDE49C",
   "vm": "evm",
