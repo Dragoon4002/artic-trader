@@ -57,25 +57,26 @@ export function Hero() {
         </div>
         {/* Heading */}
         <h1 className="relative z-10 text-[clamp(40px,7vw,80px)] font-bold tracking-[-2px] leading-[1.05] text-background max-w-6xl mb-6">
-          Deploy AI trading agents.
+          AI agents that trade.
           <br />
-          <span className="text-foreground-muted">Any market. Any scale.</span>
+          <span className="text-foreground-muted">On-chain by design.</span>
         </h1>
         {/* Subtitle */}
         <p className="relative z-10 text-xl text-background max-w-180 leading-relaxed mb-10">
-          Artic is the orchestration hub for AI-powered trading. Launch agents on
-          perps, spot, and prediction markets — manage everything from one place.
+          Artic spawns isolated agents per symbol on Morph VMs, lets your LLM
+          pick from 30+ quant strategies, and writes every decision to an
+          Initia appchain.
         </p>
         {/* Actions */}
         <div className="relative z-10 flex gap-3 items-center flex-wrap justify-center">
           <Link
-            href="/docs/quickstart"
+            href="/connect"
             className={cn(
               buttonVariants(),
               "rounded-2xl text-white border border-cta-border bg-linear-to-b from-cta-light! to-cta! hover:from-cta! hover:to-cta-hover! px-7 py-6 text-[15px] font-medium transition-all hover:-translate-y-0.5"
             )}
           >
-            Get early access
+            Launch app
           </Link>
           <Link
             href="/docs"

@@ -3,7 +3,7 @@
  * sets Authorization, and retries twice on 202 VM_WAKING (cold wake).
  */
 
-import { loadJwt } from "./hub-auth"
+import { clearJwt, loadJwt } from "./hub-auth"
 
 const HUB_URL =
   (process.env.NEXT_PUBLIC_HUB_URL as string | undefined) || "http://localhost:9000"
@@ -68,6 +68,16 @@ export async function signedFetch<T = unknown>(
     const err = (parsed as { error?: { code?: string; message?: string } })?.error
     const code = err?.code ?? `HTTP_${res.status}`
     const message = err?.message ?? res.statusText
+
+    // Session expired or invalid — clear JWT and bounce to /connect.
+    if (res.status === 401 || code === "UNAUTHENTICATED" || code === "TOKEN_EXPIRED") {
+      clearJwt()
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/connect")) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.href = `/connect?next=${next}`
+      }
+      throw new HubError(res.status, code, message, parsed)
+    }
 
     if (res.status === 202 && code === "VM_WAKING" && attempt < wakeRetries) {
       const retryAfter = parseInt(res.headers.get("Retry-After") ?? "3", 10)

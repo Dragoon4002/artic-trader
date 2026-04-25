@@ -222,13 +222,48 @@ export const demoInstalledStrategies: DemoStrategy[] = [
   // ── time filters ──────────────────────────────────────────────────────────
   { id: "session_filter", name: "session_filter", source: "builtin", description: "Trade only inside configured UTC session windows." },
   { id: "day_of_week_filter", name: "day_of_week_filter", source: "builtin", description: "Skip configured weekdays (e.g. illiquid weekends)." },
-  // ── marketplace fork ──────────────────────────────────────────────────────
+  // ── marketplace forks ─────────────────────────────────────────────────────
   {
     id: "vwap_meanrev_v2",
     name: "vwap_meanrev_v2",
     source: "marketplace",
     description: "Community fork of vwap_meanrev with session-aware bands.",
     author: "alice.init",
+  },
+  {
+    id: "rsi_divergence_pro",
+    name: "rsi_divergence_pro",
+    source: "marketplace",
+    description: "RSI hidden + regular divergence detector with trend filter.",
+    author: "quantbob.init",
+  },
+  {
+    id: "macd_zero_cross",
+    name: "macd_zero_cross",
+    source: "marketplace",
+    description: "MACD histogram zero-line cross variant tuned for 5m perps.",
+    author: "carla.init",
+  },
+  {
+    id: "atr_chandelier",
+    name: "atr_chandelier",
+    source: "marketplace",
+    description: "Chandelier exit on top of ATR breakout — trailing-stop fork.",
+    author: "deltaforce.init",
+  },
+  {
+    id: "vol_regime_switch",
+    name: "vol_regime_switch",
+    source: "marketplace",
+    description: "Switches between trend and reversion based on realized-vol regime.",
+    author: "ivy.init",
+  },
+  {
+    id: "fund_skew_perp",
+    name: "fund_skew_perp",
+    source: "marketplace",
+    description: "Funding-rate skew bias signal — extension of funding_bias_stub.",
+    author: "max.init",
   },
 ]
 
@@ -406,3 +441,56 @@ export const demoSessionKeys: DemoSessionKey[] = [
 ]
 
 export const demoApiKeyHint = "artic_•••••••••••••L8kQ"
+
+/**
+ * Derive per-strategy stats from demo agents + trades. Returns a map keyed by
+ * strategy name.
+ */
+export function strategyStats(): Record<
+  string,
+  { uses: number; success_rate: number; creator_wallet: string }
+> {
+  const out: Record<string, { uses: number; success_rate: number; creator_wallet: string }> = {}
+
+  // Default authors per source — same wallet stub used across the demo.
+  const wallets: Record<string, string> = {
+    "vwap_meanrev_v2": "init1alic3...m4n0p",
+    "my_trend_scalp": "init1hml...k9p8au",
+  }
+
+  // Count uses (active agents per strategy)
+  const usage: Record<string, number> = {}
+  demoAgents.forEach((a) => {
+    usage[a.strategy] = (usage[a.strategy] ?? 0) + 1
+  })
+
+  // Compute win rate per strategy from closed trades
+  const wins: Record<string, number> = {}
+  const total: Record<string, number> = {}
+  demoTrades.forEach((t) => {
+    if (t.pnl == null) return
+    total[t.strategy] = (total[t.strategy] ?? 0) + 1
+    if (t.pnl > 0) wins[t.strategy] = (wins[t.strategy] ?? 0) + 1
+  })
+
+  const allNames = new Set<string>([
+    ...Object.keys(usage),
+    ...Object.keys(total),
+    ...demoInstalledStrategies.map((s) => s.name),
+    ...demoAuthoredStrategies.map((s) => s.name),
+  ])
+
+  allNames.forEach((name) => {
+    out[name] = {
+      uses: usage[name] ?? 0,
+      success_rate: total[name] ? (wins[name] ?? 0) / total[name] : 0,
+      creator_wallet:
+        wallets[name] ??
+        (demoInstalledStrategies.find((s) => s.name === name)?.source === "builtin"
+          ? "init1artic...core00"
+          : "init1user...0xabcd"),
+    }
+  })
+
+  return out
+}

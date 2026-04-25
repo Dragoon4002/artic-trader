@@ -8,7 +8,8 @@ import { PendingHub } from "@/components/dashboard/pending-hub"
 import { DemoBadge } from "@/components/dashboard/demo-badge"
 import { Skeleton } from "@/components/dashboard/skeleton"
 import { useStrategies } from "@/hooks/use-queries"
-import type { StrategySourceT } from "@/lib/schemas"
+import type { Strategy, StrategySourceT } from "@/lib/schemas"
+import { strategyStats } from "@/lib/demo-data"
 
 type Tab = "installed" | "authored"
 
@@ -65,6 +66,8 @@ export default function StrategiesPage() {
 
       {isLoading ? (
         <Skeleton height={200} />
+      ) : tab === "installed" && list.length > 0 ? (
+        <StrategyCardGrid list={list} />
       ) : list.length === 0 ? (
         <div className="surface flex flex-col items-center justify-center p-14 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-accent-warm-soft)] text-[var(--color-accent-warm)]">
@@ -197,6 +200,87 @@ function TabBtn({
         <span className="pointer-events-none absolute inset-x-4 -bottom-px h-[2px] rounded-full bg-[var(--color-accent-warm)]" />
       )}
     </button>
+  )
+}
+
+function StrategyCardGrid({ list }: { list: Strategy[] }) {
+  const stats = strategyStats()
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {list.map((s) => {
+        const m = stats[s.name] ?? { uses: 0, success_rate: 0, creator_wallet: "init1artic...core00" }
+        const uses = s.uses ?? m.uses
+        const success = s.success_rate ?? m.success_rate
+        const wallet = s.creator_wallet ?? s.author ?? m.creator_wallet
+        const successPct = Math.round(success * 100)
+        const successTone =
+          success >= 0.6
+            ? "text-[var(--color-teal-light)]"
+            : success >= 0.45
+              ? "text-foreground/80"
+              : "text-[var(--color-red-light)]"
+        return (
+          <div
+            key={s.id}
+            className="surface group flex flex-col gap-4 p-5 transition hover:bg-white/[0.02]"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-mono text-sm font-semibold tracking-tight text-foreground">
+                  {s.name}
+                </p>
+                <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-foreground/55">
+                  {s.description}
+                </p>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${SOURCE_TONE[s.source]}`}
+              >
+                {s.source}
+              </span>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 gap-3 border-t border-[rgba(194,203,212,0.08)] pt-4">
+              <Stat label="Uses" value={String(uses)} />
+              <Stat label="Success" value={`${successPct}%`} tone={successTone} />
+            </div>
+
+            {/* Footer — creator wallet */}
+            <div className="flex items-center justify-between gap-2 border-t border-[rgba(194,203,212,0.08)] pt-3">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-foreground/40">
+                  Creator
+                </p>
+                <p className="truncate font-mono text-[12px] text-foreground/70">
+                  {wallet}
+                </p>
+              </div>
+              {s.source !== "builtin" && (
+                <ActionBtn
+                  disabled
+                  icon={<Trash2 size={12} />}
+                  label="Remove"
+                  tone="danger"
+                />
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wider text-foreground/40">{label}</p>
+      <p className={`num-tabular mt-1 text-lg font-semibold ${tone ?? "text-foreground"}`}>
+        {value}
+      </p>
+    </div>
   )
 }
 

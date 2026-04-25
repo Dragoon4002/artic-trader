@@ -45,7 +45,9 @@
       "Bash(bunx --bun tsc --noEmit -p /home/sounak/programming/silonelabs/hashkey/clients/web/tsconfig.json)",
       "Bash(bun run *)",
       "Bash(xargs cat *)",
-      "Bash(docker exec *)"
+      "Bash(docker exec *)",
+      "Bash(git reset *)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
       "/home/sounak/programming/silonelabs/hashkey/bela-quant-engine",

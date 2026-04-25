@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/dashboard/skeleton"
 import { KillSwitch } from "@/components/dashboard/kill-switch"
 import type { Agent, AgentStatusT } from "@/lib/schemas"
 import type { DemoTrade } from "@/lib/demo-data"
+import { fmtInit, usdToInit } from "@/lib/currency"
 
 const STATUS_TONE: Record<AgentStatusT, string> = {
   alive: "text-[var(--color-teal)] bg-[var(--color-teal)]/12",
@@ -108,19 +109,19 @@ export default function AgentsPage() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <StatCard
             label="Total PnL"
-            value={fmt(totals.total)}
+            value={fmtInit(totals.total)}
             tone={toneOf(totals.total)}
-            hint={`${fmt(totals.realised)} realised · ${fmt(totals.unrealised)} open`}
+            hint={`${fmtInit(totals.realised)} realised · ${fmtInit(totals.unrealised)} open`}
           />
           <StatCard
             label="Realised"
-            value={fmt(totals.realised)}
+            value={fmtInit(totals.realised)}
             tone={toneOf(totals.realised)}
             hint="Closed trade PnL"
           />
           <StatCard
             label="Unrealised"
-            value={fmt(totals.unrealised)}
+            value={fmtInit(totals.unrealised)}
             tone={toneOf(totals.unrealised)}
             hint="Open positions"
           />
@@ -148,7 +149,7 @@ export default function AgentsPage() {
           <span
             className={`num-tabular font-mono text-base ${toneClass(totals.realised)}`}
           >
-            {fmt(totals.realised)} USDT
+            {fmtInit(totals.realised)}
           </span>
         </header>
         {loading ? (
@@ -236,14 +237,14 @@ function AgentCard({
           <div
             className={`num-tabular mt-1.5 font-mono text-[26px] font-semibold leading-none tracking-tight ${valueTone}`}
           >
-            <span className="text-foreground/50">$</span>
-            {currentValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {usdToInit(currentValue).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            <span className="ml-1 text-[14px] font-medium text-foreground/50">INIT</span>
           </div>
         </div>
         <div className="text-right">
           <div className="label-xs">Realised</div>
           <div className={`num-tabular mt-1.5 font-mono text-sm ${toneClass(realised)}`}>
-            {fmt(realised)}
+            {fmtInit(realised)}
           </div>
         </div>
       </div>

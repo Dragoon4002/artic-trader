@@ -274,7 +274,7 @@ export function Navbar() {
           })}
 
           <Link
-            href="/docs/quickstart"
+            href="/connect"
             onMouseEnter={() => { cancelClose(); setActiveDropdown(null); }}
             className={cn(
               buttonVariants({ size: "sm" }),
@@ -365,7 +365,7 @@ export function Navbar() {
               })}
 
               <Link
-                href="/docs/quickstart"
+                href="/connect"
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   buttonVariants(),

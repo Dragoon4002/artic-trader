@@ -23,6 +23,12 @@ export const StrategySchema = z.object({
   description: z.string(),
   installs: z.number().optional(),
   author: z.string().optional(),
+  /** Wallet address (init1…) of the original creator. */
+  creator_wallet: z.string().optional(),
+  /** How many active agents currently use this strategy. */
+  uses: z.number().optional(),
+  /** 0–1 win rate across closed trades attributed to this strategy. */
+  success_rate: z.number().optional(),
   updated_at: Iso8601Schema.optional(),
 })
 export type Strategy = z.infer<typeof StrategySchema>

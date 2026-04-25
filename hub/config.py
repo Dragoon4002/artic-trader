@@ -11,8 +11,8 @@ class Settings(BaseSettings):
 
     # Auth / secrets
     JWT_SECRET: str = "changeme-jwt"
-    JWT_EXPIRY_MINUTES: int = 15
-    REFRESH_EXPIRY_DAYS: int = 30
+    JWT_EXPIRY_MINUTES: int = 720  # 12h access token (was 15m)
+    REFRESH_EXPIRY_DAYS: int = 90  # 90d refresh window (was 30d)
     KEK: str = ""  # 32-byte base64; required in prod
     INTERNAL_SECRET: str = "changeme"  # shared with user-server (legacy name)
 
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # Wallet auth
     AUTH_MESSAGE_DOMAIN: str = "artic.trade"
     AUTH_NONCE_TTL_SECONDS: int = 300
-    AUTH_SESSION_TTL_SECONDS: int = 28800  # 8h
+    AUTH_SESSION_TTL_SECONDS: int = 604800  # 7d (was 8h)
     AUTH_SUPPORTED_CHAINS: str = "initia-testnet"  # comma-separated
 
     # Initia .init name service

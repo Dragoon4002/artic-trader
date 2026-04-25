@@ -32,6 +32,7 @@ class Agent(Base):
     status: Mapped[str] = mapped_column(String, nullable=False, server_default="stopped")
     current_strategy: Mapped[str | None] = mapped_column(String, nullable=True)
     unrealized_pnl_usdt: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
+    last_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

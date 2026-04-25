@@ -31,20 +31,21 @@ export function CtaBanner() {
             Get started
           </p>
           <h2 className="text-[clamp(40px,7vw,96px)] font-bold tracking-tight text-white mb-5 max-w-5xl mx-auto leading-[1.05]">
-            Start trading with intelligence.
+            Spin up your first agent.
           </h2>
           <p className="text-[17px] text-white/60 mb-10 max-w-xl mx-auto leading-relaxed">
-            Join the early access waitlist or self-host from GitHub today.
+            Connect a wallet, pick a symbol, hand the strategy to an LLM.
+            Self-host the stack from GitHub when you want full control.
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
             <Link
-              href="/docs/quickstart"
+              href="/connect"
               className={cn(
                 buttonVariants(),
                 "rounded-2xl text-white border border-cta-border bg-linear-to-b from-cta-light! to-cta! hover:from-cta! hover:to-cta-hover! px-7 h-12 text-[15px] font-semibold gap-2 transition-colors"
               )}
             >
-              Get early access <ArrowRight className="w-4 h-4" />
+              Launch app <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               href="https://github.com/Dragoon4002/Artic_trader"

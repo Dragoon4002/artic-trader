@@ -16,7 +16,9 @@ export default function Home() {
         <Hero />
         <Ticker />
         {/* <FeatureTransition /> */}
-        <FeaturesGrid />
+        <FadeIn>
+          <FeaturesGrid />
+        </FadeIn>
         <FadeIn>
           <HowItWorks />
         </FadeIn>

@@ -225,9 +225,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               agent.unrealised_pnl == null ? (
                 <span className="text-foreground/40">—</span>
               ) : agent.unrealised_pnl >= 0 ? (
-                <span className="text-[var(--color-teal)]">+{agent.unrealised_pnl.toFixed(2)} USDT</span>
+                <span className="text-[var(--color-teal)]">+{agent.unrealised_pnl.toFixed(2)} INIT</span>
               ) : (
-                <span className="text-[var(--color-red-light)]">{agent.unrealised_pnl.toFixed(2)} USDT</span>
+                <span className="text-[var(--color-red-light)]">{agent.unrealised_pnl.toFixed(2)} INIT</span>
               )
             }
           />
@@ -236,7 +236,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         </Card>
 
         <Card title="Config">
-          <Kv label="Amount" value={`${agent.amount_usdt} USDT`} />
+          <Kv label="Amount" value={`${agent.amount_usdt} INIT`} />
           <Kv label="Leverage" value={`${agent.leverage}×`} />
           <Kv
             label="TP / SL"
@@ -260,9 +260,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               closedPnls.length === 0 ? (
                 <span className="text-foreground/40">—</span>
               ) : totalPnl >= 0 ? (
-                <span className="text-[var(--color-teal)]">+{totalPnl.toFixed(2)} USDT</span>
+                <span className="text-[var(--color-teal)]">+{totalPnl.toFixed(2)} INIT</span>
               ) : (
-                <span className="text-[var(--color-red-light)]">{totalPnl.toFixed(2)} USDT</span>
+                <span className="text-[var(--color-red-light)]">{totalPnl.toFixed(2)} INIT</span>
               )
             }
           />

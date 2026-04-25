@@ -75,6 +75,9 @@ async def push_status(
     if body.active_strategy and agent.current_strategy != body.active_strategy:
         agent.current_strategy = body.active_strategy
         dirty = True
+    if body.price is not None and body.price > 0:
+        agent.last_price = Decimal(str(body.price))
+        dirty = True
     if dirty:
         await db.commit()
 

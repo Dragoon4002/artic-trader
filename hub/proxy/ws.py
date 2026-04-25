@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 from ..auth import service as auth_service
 from ..config import settings
 from ..vm.service import WakeResult
-from ..vm import service as vm_service
+from ..vm import get_service, registry
 
 router = APIRouter(tags=["proxy-ws"])
 
@@ -50,7 +50,7 @@ async def ws_agent_logs(ws: WebSocket, agent_id: str, token: str = Query(default
         return
 
     # Wake the VM if cold so the downstream WS can connect.
-    state = vm_service.registry.get(user_id)
+    state = registry.get(user_id)
     if state is None:
         await ws.accept()
         await ws.send_json({"type": "error", "code": "VM_NOT_PROVISIONED"})
@@ -58,13 +58,13 @@ async def ws_agent_logs(ws: WebSocket, agent_id: str, token: str = Query(default
         return
 
     if state.status != "running" or not state.endpoint:
-        result = await vm_service.wake(user_id)
+        result = await get_service().wake(user_id)
         if result != WakeResult.OK:
             await ws.accept()
             await ws.send_json({"type": "error", "code": "VM_NOT_READY"})
             await ws.close(code=status.WS_1011_INTERNAL_ERROR)
             return
-        state = vm_service.registry.get(user_id)
+        state = registry.get(user_id)
         if state is None or not state.endpoint:
             await ws.accept()
             await ws.send_json({"type": "error", "code": "VM_ENDPOINT_MISSING"})

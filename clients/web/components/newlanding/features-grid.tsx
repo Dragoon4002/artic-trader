@@ -178,7 +178,7 @@ export function FeaturesGrid() {
                   onFocus={() => setActive(i)}
                   onClick={() => setActive(i)}
                   className={cn(
-                    "group relative w-full flex items-center justify-between py-5 px-2 border-b border-white/10 text-left transition-colors duration-200",
+                    "group relative w-full flex items-center justify-between py-5 px-4 border-b border-white/10 text-left transition-colors duration-200",
                     isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
                   )}
                 >

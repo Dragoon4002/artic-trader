@@ -59,6 +59,7 @@ interface BackendAgent {
   container_id: string | null
   port: number | null
   unrealized_pnl_usdt: number | null
+  last_price: number | null
   current_strategy: string | null
   created_at: string
   updated_at: string
@@ -73,7 +74,7 @@ function toClientAgent(b: BackendAgent): Agent {
     // "error" — web client's AgentStatus enum is narrower; pass through, Zod
     // parse in consumers will surface mismatches if any.
     status: b.status as Agent["status"],
-    price: 0, // live field — not exposed via REST yet
+    price: b.last_price ?? 0,
     side: "flat" as Agent["side"],
     amount_usdt: b.risk_params.amount_usdt ?? 0,
     leverage: b.risk_params.leverage ?? 1,
