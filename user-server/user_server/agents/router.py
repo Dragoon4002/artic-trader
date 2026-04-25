@@ -34,6 +34,8 @@ class AgentOut(BaseModel):
     strategy_pool: list
     risk_params: dict
     status: str
+    current_strategy: str | None
+    unrealized_pnl_usdt: float | None
     container_id: str | None
     port: int | None
     created_at: datetime
@@ -50,6 +52,8 @@ class AgentOut(BaseModel):
             strategy_pool=a.strategy_pool,
             risk_params=a.risk_params,
             status=a.status,
+            current_strategy=a.current_strategy,
+            unrealized_pnl_usdt=float(a.unrealized_pnl_usdt) if a.unrealized_pnl_usdt is not None else None,
             container_id=a.container_id,
             port=a.port,
             created_at=a.created_at,

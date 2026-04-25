@@ -30,7 +30,13 @@ class AppSettings(BaseSettings):
     # Optional MongoDB cache
     MONGODB_URI: str = ""
 
-    # On-chain
+    # On-chain (Initia rollup; CHAIN_*/HSK_* kept as fallback aliases)
+    INITIA_RPC_URL: str = ""
+    INITIA_PRIVATE_KEY: str = ""
+    INITIA_CHAIN_ID: str = ""
+    INITIA_EXPLORER_BASE: str = "https://scan.testnet.initia.xyz"
+    CHAIN_RPC_URL: str = ""
+    CHAIN_PRIVATE_KEY: str = ""
     HSK_RPC_URL: str = ""
     HSK_PRIVATE_KEY: str = ""
 

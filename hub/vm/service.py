@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..db import base as db_base
 from ..db.models.user_vm import UserVM
-from .provider import VMProvider, VMProviderError
+from .provider import VMHandle, VMProvider, VMProviderError
 from .registry import VMRegistry, VMState
 from .registry import registry as _default_registry
 
@@ -111,6 +111,17 @@ class VMService:
                 handle = await self._start_or_resume(user_id, state)
             except VMProviderError as e:
                 logger.exception("wake failed for user %s: %s", user_id, e)
+                # Best-effort: if _start_or_resume persisted a vm_id before
+                # failing (e.g. launch_user_server died after start), stop it
+                # so we don't leak a paused Morph instance.
+                current = self.registry.get(user_id)
+                leaked = current.provider_vm_id if current else None
+                if leaked:
+                    try:
+                        await self.provider.stop(leaked)
+                    except Exception as ce:
+                        logger.warning("cleanup stop of %s failed: %s", leaked, ce)
+                    await self._clear_vm_mapping(user_id)
                 self.registry.set_status(user_id, "error")
                 await self._persist_status(user_id, "error")
                 return WakeResult.FAILED
@@ -197,20 +208,59 @@ class VMService:
             row = (
                 await db.execute(select(UserVM).where(UserVM.user_id == user_id))
             ).scalar_one_or_none()
+            existing_vm_id = row.provider_vm_id if row else None
+            existing_endpoint = row.endpoint if row else None
             snapshot_id = (
                 row.snapshot_id if row else None
             ) or settings.MORPH_GOLDEN_SNAPSHOT_ID
             user_token = settings.INTERNAL_SECRET
+
+        # Case A/B: existing mapping with endpoint — reuse. wake()'s outer
+        # health poll hits the endpoint; Morph auto-resumes a paused instance
+        # on first HTTP.
+        if existing_vm_id and existing_endpoint:
+            provider_status = await self.provider.get_status(existing_vm_id)
+            if provider_status in ("ready", "paused"):
+                return VMHandle(
+                    vm_id=existing_vm_id,
+                    endpoint=existing_endpoint,
+                    snapshot_id=snapshot_id,
+                )
+            logger.info(
+                "stale vm %s for user %s (provider status=%s); clearing mapping",
+                existing_vm_id,
+                user_id,
+                provider_status,
+            )
+            await self._clear_vm_mapping(user_id)
+        # Case C: vm_id persisted but no endpoint — failed mid-wake orphan.
+        elif existing_vm_id:
+            logger.info(
+                "orphan vm %s for user %s (no endpoint); stopping before restart",
+                existing_vm_id,
+                user_id,
+            )
+            try:
+                await self.provider.stop(existing_vm_id)
+            except VMProviderError as e:
+                logger.warning("stop of orphan %s failed: %s", existing_vm_id, e)
+            await self._clear_vm_mapping(user_id)
+
         if not snapshot_id:
             raise VMProviderError(
                 "no snapshot id (set MORPH_GOLDEN_SNAPSHOT_ID or per-user)"
             )
+
+        # Case D: fresh start. Persist vm_id BEFORE launch_user_server so a
+        # mid-wake failure leaves enough state for cleanup.
         handle = await self.provider.start(snapshot_id)
+        await self._persist_vm_id(user_id, handle.vm_id)
         await self.provider.configure_wake_on_http(handle.vm_id)
         endpoint = await self.provider.launch_user_server(
             handle.vm_id, user_id, user_token
         )
-        return type(handle)(
+        await self._persist_endpoint(user_id, endpoint)
+        return VMHandle(
             vm_id=handle.vm_id, endpoint=endpoint, snapshot_id=snapshot_id
         )
 
@@ -221,6 +271,37 @@ class VMService:
             ).scalar_one_or_none()
             if row:
                 row.status = status
+                await db.commit()
+
+    async def _persist_vm_id(self, user_id: str, vm_id: str) -> None:
+        self.registry.set_status(user_id, "waking", provider_vm_id=vm_id)
+        async with db_base.async_session() as db:
+            row = (
+                await db.execute(select(UserVM).where(UserVM.user_id == user_id))
+            ).scalar_one_or_none()
+            if row:
+                row.provider_vm_id = vm_id
+                await db.commit()
+
+    async def _persist_endpoint(self, user_id: str, endpoint: str) -> None:
+        self.registry.set_status(user_id, "waking", endpoint=endpoint)
+        async with db_base.async_session() as db:
+            row = (
+                await db.execute(select(UserVM).where(UserVM.user_id == user_id))
+            ).scalar_one_or_none()
+            if row:
+                row.endpoint = endpoint
+                await db.commit()
+
+    async def _clear_vm_mapping(self, user_id: str) -> None:
+        self.registry.set_status(user_id, "waking", provider_vm_id=None, endpoint=None)
+        async with db_base.async_session() as db:
+            row = (
+                await db.execute(select(UserVM).where(UserVM.user_id == user_id))
+            ).scalar_one_or_none()
+            if row:
+                row.provider_vm_id = None
+                row.endpoint = None
                 await db.commit()
 
     async def _persist_running(

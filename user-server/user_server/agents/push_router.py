@@ -29,6 +29,7 @@ class StatusPush(BaseModel):
     price: float
     position_size_usdt: float | None = None
     unrealized_pnl_usdt: float | None = None
+    active_strategy: str | None = None
 
 
 class TradePush(BaseModel):
@@ -44,10 +45,12 @@ class TradePush(BaseModel):
     open_at: datetime
     close_at: datetime | None = None
     close_reason: str | None = None
+    tx_hash: str | None = None
 
 
 class LogsPush(BaseModel):
     entries: list[LogEntryIn] = Field(default_factory=list)
+    agent_id: uuid.UUID | None = None  # fallback if entries lack agent_id
 
 
 class SupervisorPush(BaseModel):
@@ -64,8 +67,15 @@ async def push_status(
     if agent is None:
         raise NotFound(f"agent {agent_id} not found")
     registry.touch(agent_id)
-    if agent.status != "alive":
-        agent.status = "alive"
+    dirty = agent.status != "alive"
+    agent.status = "alive"
+    if body.unrealized_pnl_usdt is not None:
+        agent.unrealized_pnl_usdt = body.unrealized_pnl_usdt
+        dirty = True
+    if body.active_strategy and agent.current_strategy != body.active_strategy:
+        agent.current_strategy = body.active_strategy
+        dirty = True
+    if dirty:
         await db.commit()
 
 
@@ -87,6 +97,7 @@ async def push_trade(body: TradePush, db: AsyncSession = Depends(get_session)) -
                 open_at=body.open_at,
                 close_at=body.close_at,
                 close_reason=body.close_reason,
+                tx_hash=body.tx_hash,
             )
         )
     else:
@@ -94,25 +105,47 @@ async def push_trade(body: TradePush, db: AsyncSession = Depends(get_session)) -
         exists.pnl_usdt = body.pnl_usdt
         exists.close_at = body.close_at
         exists.close_reason = body.close_reason
+        if body.tx_hash and not exists.tx_hash:
+            exists.tx_hash = body.tx_hash
     await db.commit()
     return {"id": str(body.id)}
+
+
+class TxHashPatch(BaseModel):
+    tx_hash: str
+
+
+@router.post("/trades/{trade_id}/tx-hash", status_code=200)
+async def patch_trade_tx_hash(
+    trade_id: uuid.UUID, body: TxHashPatch, db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Set the on-chain tx hash for a trade after the chain log confirms."""
+    trade = await db.get(Trade, trade_id)
+    if trade is None:
+        raise NotFound(f"trade {trade_id} not found")
+    trade.tx_hash = body.tx_hash
+    await db.commit()
+    return {"id": str(trade_id), "tx_hash": body.tx_hash}
 
 
 @router.post("/logs", status_code=201)
 async def push_logs(body: LogsPush, db: AsyncSession = Depends(get_session)) -> dict:
     if not body.entries:
         return {"inserted": 0}
-    rows = [
-        LogEntry(
-            agent_id=uuid.UUID(e.agent_id),
+    rows = []
+    for e in body.entries:
+        aid = uuid.UUID(e.agent_id) if e.agent_id else body.agent_id
+        if aid is None:
+            continue
+        rows.append(LogEntry(
+            agent_id=aid,
             level=_map_level(e.level),
             message=e.message,
             ts=e.ts if e.ts.tzinfo else e.ts.replace(tzinfo=timezone.utc),
-        )
-        for e in body.entries
-    ]
-    db.add_all(rows)
-    await db.commit()
+        ))
+    if rows:
+        db.add_all(rows)
+        await db.commit()
     return {"inserted": len(rows)}
 
 
@@ -129,6 +162,5 @@ async def push_supervisor(body: SupervisorPush, db: AsyncSession = Depends(get_s
     return {"ok": True}
 
 
-def _map_level(level: LogLevel) -> str:
-    # data-model stores TEXT; shared enum is {debug,info,warn,error}; persist raw string.
-    return level.value if hasattr(level, "value") else str(level)
+def _map_level(level: str) -> str:
+    return str(level)

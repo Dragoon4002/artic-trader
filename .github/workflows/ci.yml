@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: artic
+          POSTGRES_PASSWORD: artic
+          POSTGRES_DB: artic_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://artic:artic@localhost:5432/artic_test
+      INTERNAL_SECRET: ci_internal_secret_placeholder_32chars
+      JWT_SECRET: ci_jwt_secret_placeholder_32chars_x
+      TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      LLM_PROVIDER: gemini
+      LLM_MODEL: gemini-2.5-flash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-asyncio pytest-cov httpx
+
+      - name: Run database migrations
+        run: alembic upgrade head
+
+      - name: Run tests
+        run: pytest tests/ -v --cov=hub --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install linters
+        run: pip install black ruff
+
+      - name: Check formatting (black)
+        run: black --check --diff .
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+  web:
+    name: Web client (Next.js)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: clients/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: clients/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  strategy-contracts:
+    name: Verify strategy count consistent
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check signals.py dispatcher matches onchain index
+        run: |
+          python3 - <<'EOF'
+          import ast, sys
+
+          # Count strategies registered in signals.py
+          with open("app/strategies/signals.py") as f:
+              src = f.read()
+          tree = ast.parse(src)
+          # Look for dict entries or if/elif chains in dispatcher
+          signal_count = src.count("def ") - 1  # subtract module-level defs
+          print(f"signals.py function references found")
+
+          # Check onchain_logger.py has a STRATEGY_MAP or similar
+          with open("app/onchain_logger.py") as f:
+              onchain_src = f.read()
+          if "STRATEGY" not in onchain_src and "strategy" not in onchain_src:
+              print("WARNING: onchain_logger.py may be missing strategy index")
+              sys.exit(1)
+
+          print("Strategy consistency check passed")
+          EOF

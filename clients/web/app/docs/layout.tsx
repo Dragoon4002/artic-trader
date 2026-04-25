@@ -1,4 +1,4 @@
-import { Navbar } from "@/components/landing/navbar";
+import { Navbar } from "@/components/newlanding/navbar";
 import { Footer } from "@/components/landing/footer";
 import { DocsSidebar } from "@/components/docs/sidebar";
 import { MobileDocsNav } from "@/components/docs/mobile-docs-nav";

@@ -1,8 +1,10 @@
-"""Log trade executions to HashKey Chain via TradeLogger contract."""
+"""Log trade executions to Initia rollup via TradeLogger contract."""
 import os
 import json
 from typing import Optional
 from web3 import Web3
+
+from app.chain_config import get_rpc_url, get_private_key
 
 SIDE_MAP = {"OPEN_LONG": 0, "OPEN_SHORT": 1, "CLOSE_LONG": 2, "CLOSE_SHORT": 3}
 
@@ -13,8 +15,8 @@ class OnchainTradeLogger:
     """Logs trades to HashKey Chain TradeLogger contract."""
 
     def __init__(self):
-        rpc = os.getenv("HSK_RPC_URL")
-        pk = os.getenv("HSK_PRIVATE_KEY")
+        rpc = get_rpc_url()
+        pk = get_private_key()
         deployed_path = os.path.join(
             os.path.dirname(__file__), "..", "contracts", "trade_logger_deployed.json"
         )

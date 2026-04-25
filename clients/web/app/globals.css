@@ -51,18 +51,46 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Custom Artic colors */
-  --color-orange: #DA7756;
-  --color-orange-light: #E8A080;
-  --color-orange-text: #F0C4A8;
-  --color-orange-hover: #C46A4A;
-  --color-teal: #1D9E75;
-  --color-teal-light: #5DCAA5;
-  --color-red: #E4473B;
-  --color-red-light: #F07870;
-  --color-blue-accent: #378ADD;
-  --color-blue-light: #85B7EB;
-  --color-surface: #0A0A0F;
+  /* Artic — Option A: warm luminous. 3-tier elevation + saturated terracotta. */
+  --color-surface: #0E141A;
+  --color-surface-elevated: #171D25;
+  --color-surface-raised: #1F2731;
+  --color-surface-sunken: #0A0E12;
+
+  /* Primary accent — soft cream. Default for all primary surfaces + buttons. */
+  --color-accent-warm: #F3E4D1;
+  --color-accent-warm-hover: #E5D2B8;
+  --color-accent-warm-soft: rgba(243, 228, 209, 0.14);
+  --color-accent-warm-border: rgba(243, 228, 209, 0.38);
+
+  /* Secondary accent — demoted cream. Reserved for soft hints + subtle borders. */
+  --color-accent-cream: #F4D9C2;
+  --color-accent-cream-soft: rgba(244, 217, 194, 0.08);
+
+  /* Legacy aliases (kept so any remaining orange-* refs still resolve) */
+  --color-orange: #F3E4D1;
+  --color-orange-light: #F2B89A;
+  --color-orange-text: #F4D9C2;
+  --color-orange-hover: #E5D2B8;
+
+  /* Semantic signals — harmonized with warm palette */
+  --color-teal: #6FCAA0;
+  --color-teal-light: #8FDCB7;
+  --color-red: #E85F5F;
+  --color-red-light: #F07A6D;
+  --color-blue-accent: #8FB1E8;
+  --color-blue-light: #B3C9EE;
+  --color-amber: #F0C561;
+
+  /* Primary CTA */
+  --color-cta: #34424D;
+  --color-cta-light: #3D4C58;
+  --color-cta-hover: #1F262D;
+  --color-cta-border: #C4CCD3;
+
+  /* Neutral gray accent (replaces orange in docs/litepaper) */
+  --color-accent-gray: #C4CCD3;
+  --color-accent-gray-soft: #9AA4AE;
 
   --animate-ticker: ticker 30s linear infinite;
 }
@@ -72,49 +100,188 @@
   to { transform: translateX(-50%); }
 }
 
-/* Dark-only theme — Artic design system */
+/* Dark-only theme — Artic Option A */
 :root {
-  --background: #0A0A0F;
-  --foreground: #F0EDED;
-  --card: rgba(255, 255, 255, 0.03);
-  --card-foreground: #F0EDED;
-  --popover: #12121a;
-  --popover-foreground: #F0EDED;
-  --primary: #DA7756;
-  --primary-foreground: #ffffff;
-  --secondary: rgba(255, 255, 255, 0.06);
-  --secondary-foreground: rgba(255, 255, 255, 0.7);
-  --muted: rgba(255, 255, 255, 0.06);
-  --muted-foreground: rgba(255, 255, 255, 0.5);
-  --accent: rgba(218, 119, 86, 0.15);
-  --accent-foreground: #F0C4A8;
-  --destructive: #ef4444;
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.1);
-  --ring: #E8A080;
+  color-scheme: dark;
+  --background: #0E141A;
+  --foreground: #F2F0EB;
+  --foreground-muted: #8B94A1;
+  --card: #171D25;
+  --card-foreground: #F2F0EB;
+  --popover: #1F2731;
+  --popover-foreground: #F2F0EB;
+  --primary: #F3E4D1;
+  --primary-foreground: #0E141A;
+  --secondary: rgba(255, 255, 255, 0.05);
+  --secondary-foreground: #8B94A1;
+  --muted: rgba(255, 255, 255, 0.04);
+  --muted-foreground: rgba(139, 148, 161, 0.9);
+  --accent: rgba(243, 228, 209, 0.14);
+  --accent-foreground: #F3E4D1;
+  --destructive: #E85F5F;
+  --border: rgba(194, 203, 212, 0.06);
+  --input: rgba(194, 203, 212, 0.10);
+  --ring: rgba(243, 228, 209, 0.55);
   --radius: 0.625rem;
-  --chart-1: #DA7756;
-  --chart-2: #1D9E75;
-  --chart-3: #E4473B;
-  --chart-4: #378ADD;
-  --chart-5: #E8A080;
-  --sidebar: #0A0A0F;
-  --sidebar-foreground: #F0EDED;
-  --sidebar-primary: #DA7756;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(218, 119, 86, 0.15);
-  --sidebar-accent-foreground: #F0C4A8;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #E8A080;
+  --chart-1: #F3E4D1;
+  --chart-2: #6FCAA0;
+  --chart-3: #F07A6D;
+  --chart-4: #8FB1E8;
+  --chart-5: #F0C561;
+  --sidebar: #0E141A;
+  --sidebar-foreground: #F2F0EB;
+  --sidebar-primary: #F3E4D1;
+  --sidebar-primary-foreground: #0E141A;
+  --sidebar-accent: rgba(243, 228, 209, 0.14);
+  --sidebar-accent-foreground: #F3E4D1;
+  --sidebar-border: rgba(194, 203, 212, 0.06);
+  --sidebar-ring: rgba(243, 228, 209, 0.55);
 }
 
-/* Smooth hover lift — from ghost */
+/* Smooth hover lift — borderless surfaces rely on shadow change */
 .hover-lift {
-  transition: transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), box-shadow 0.25s ease;
+  transition:
+    transform 0.25s cubic-bezier(0.33, 1, 0.68, 1),
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
 }
 .hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 50px -22px rgba(0, 0, 0, 0.75);
+}
+
+/* ── Utility layer — elevation tiers replace generic borders ───────────── */
+
+/** Base dashboard surface (sits directly on page). Use for primary cards +
+ *  chart containers. No border — hierarchy comes from bg alone. */
+@utility surface {
+  background: var(--color-surface-elevated);
+  border-radius: 1rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+/** Raised surface — for cards that need to float above the base surface
+ *  (agent cards inside a section, popover, etc.). */
+@utility surface-raised {
+  background: var(--color-surface-raised);
+  border-radius: 1rem;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 28px -14px rgba(0, 0, 0, 0.6);
+}
+
+/** Sunken well — charts, code blocks, log streams. Reads "below" the page. */
+@utility surface-sunken {
+  background: var(--color-surface-sunken);
+  border-radius: 1rem;
+}
+
+/** Accent surface — for primary CTAs, active nav, emphasis cards. */
+@utility surface-accent {
+  background: var(--color-accent-warm-soft);
+  border: 1px solid var(--color-accent-warm-border);
+  border-radius: 0.625rem;
+  color: var(--color-accent-warm);
+}
+
+/* ── Typography scale ──────────────────────────────────────────────────── */
+
+@utility h-page {
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+@utility h-section {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(242, 240, 235, 0.55);
+}
+@utility label-xs {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(242, 240, 235, 0.5);
+}
+
+@utility btn-disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+@utility num-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Focus ring — 2px terracotta on any .focus-ring element */
+@utility focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ── Native controls ───────────────────────────────────────────────────── */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 20px;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(194, 203, 212, 0.16);
+  border-radius: 999px;
+}
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: rgba(194, 203, 212, 0.16);
+  border-radius: 999px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-accent-warm);
+  border: 2px solid var(--color-surface);
+  margin-top: -5px;
+  box-shadow: 0 0 0 1px rgba(232, 162, 122, 0.5);
+  transition: box-shadow 0.15s ease;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-accent-warm);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px rgba(232, 162, 122, 0.5);
+  transition: box-shadow 0.15s ease;
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(232, 162, 122, 0.28);
+}
+input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(232, 162, 122, 0.28);
+}
+
+/* Respect reduced motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer base {
@@ -123,8 +290,25 @@
   }
   body {
     @apply bg-surface text-foreground;
+    /* Faint radial warmth seeping down from the top — adds depth without
+       competing with content. Pairs with the terracotta accent. */
+    background-image:
+      radial-gradient(ellipse 1200px 600px at 50% -200px, rgba(232, 162, 122, 0.05), transparent 60%),
+      radial-gradient(ellipse 800px 400px at 100% 0%, rgba(143, 177, 232, 0.03), transparent 50%);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans scroll-smooth;
+  }
+  option {
+    background-color: #1F2731;
+    color: #F2F0EB;
+  }
+  select:focus {
+    outline: none;
+  }
+  ::selection {
+    background: rgba(232, 162, 122, 0.3);
+    color: #F2F0EB;
   }
 }

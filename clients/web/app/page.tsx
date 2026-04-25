@@ -1,11 +1,11 @@
-import { Navbar } from "@/components/landing/navbar";
-import { Hero } from "@/components/landing/hero";
-import { Ticker } from "@/components/landing/ticker";
-import { FeaturesGrid } from "@/components/landing/features-grid";
-import { HowItWorks } from "@/components/landing/how-it-works";
-import { ClientsSection } from "@/components/landing/clients-section";
-import { CtaBanner } from "@/components/landing/cta-banner";
-import { Footer } from "@/components/landing/footer";
+import { Navbar } from "@/components/newlanding/navbar";
+import { Hero } from "@/components/newlanding/hero";
+import { Ticker } from "@/components/newlanding/ticker";
+import { FeaturesGrid } from "@/components/newlanding/features-grid";
+import { HowItWorks } from "@/components/newlanding/how-it-works";
+import { ClientsSection } from "@/components/newlanding/clients-section";
+import { CtaBanner } from "@/components/newlanding/cta-banner";
+import { Footer } from "@/components/newlanding/footer";
 import { FadeIn } from "@/components/shared/fade-in";
 
 export default function Home() {
@@ -15,13 +15,14 @@ export default function Home() {
       <main>
         <Hero />
         <Ticker />
+        {/* <FeatureTransition /> */}
         <FeaturesGrid />
         <FadeIn>
           <HowItWorks />
         </FadeIn>
-        <FadeIn>
+        {/* <FadeIn>
           <ClientsSection />
-        </FadeIn>
+        </FadeIn> */}
         <FadeIn>
           <CtaBanner />
         </FadeIn>

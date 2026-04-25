@@ -58,6 +58,7 @@ def spawn(agent_id: uuid.UUID, env: dict[str, str]) -> DockerContainer:
         name=name,
         environment=env,
         network=settings.AGENT_NETWORK,
+        extra_hosts={"host.docker.internal": "host-gateway"},
         detach=True,
         restart_policy={"Name": "on-failure", "MaximumRetryCount": 3},
         labels={"artic.role": "agent", "artic.agent_id": str(agent_id)},
@@ -77,19 +78,49 @@ def stop(container_id: str, timeout: int = 30) -> None:
         container.remove(force=True)
 
 
-def build_env(agent: "AgentRow", internal_secret: str, user_server_url: str) -> dict[str, str]:
-    """Compose the env dict per docs/alpha/plans/user-vm.md §Agent env."""
+def build_env(
+    agent: "AgentRow",
+    internal_secret: str,
+    user_server_url: str,
+    llm_api_key: str | None = None,
+    twelve_data_api_key: str | None = None,
+    owner_init_name: str | None = None,
+) -> dict[str, str]:
+    """Compose the env dict per docs/alpha/plans/user-vm.md §Agent env.
+
+    Forwards Initia rollup config from the user-server's environment so the
+    agent container can sign DecisionLogger / TradeLogger txs.
+    """
     import json
+    import os
+
+    chain_env: dict[str, str] = {}
+    for key in (
+        "INITIA_RPC_URL",
+        "INITIA_PRIVATE_KEY",
+        "INITIA_CHAIN_ID",
+        "INITIA_EXPLORER_BASE",
+        "CHAIN_RPC_URL",
+        "CHAIN_PRIVATE_KEY",
+    ):
+        v = os.getenv(key)
+        if v:
+            chain_env[key] = v
 
     return {
         "HUB_AGENT_ID": str(agent.id),
         "SYMBOL": agent.symbol,
         "USER_SERVER_URL": user_server_url,
+        "HUB_URL": user_server_url,  # hub_callback reads HUB_URL for push endpoints
         "INTERNAL_SECRET": internal_secret,
         "STRATEGY_POOL": json.dumps(agent.strategy_pool or []),
         "LLM_PROVIDER": agent.llm_provider,
         "LLM_MODEL": agent.llm_model,
         "RISK_PARAMS": json.dumps(agent.risk_params or {}),
+        **({"GEMINI_API_KEY": llm_api_key} if llm_api_key else {}),
+        **({"TWELVE_DATA_API_KEY": twelve_data_api_key} if twelve_data_api_key else {}),
+        **({"OWNER_INIT_NAME": owner_init_name} if owner_init_name else {}),
+        **chain_env,
     }
 
 

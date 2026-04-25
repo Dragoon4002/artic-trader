@@ -188,24 +188,41 @@ export interface DemoStrategy {
 }
 
 export const demoInstalledStrategies: DemoStrategy[] = [
-  {
-    id: "ema_crossover",
-    name: "ema_crossover",
-    source: "builtin",
-    description: "Classic 12/26 EMA crossover with zero-lag entry confirmation.",
-  },
-  {
-    id: "rsi_reversion",
-    name: "rsi_reversion",
-    source: "builtin",
-    description: "Mean-reversion on RSI(14) > 70 / < 30 extremes.",
-  },
-  {
-    id: "atr_breakout",
-    name: "atr_breakout",
-    source: "builtin",
-    description: "ATR-band breakout with volume confirmation.",
-  },
+  // ── momentum ──────────────────────────────────────────────────────────────
+  { id: "simple_momentum", name: "simple_momentum", source: "builtin", description: "Basic price-vs-N-bars-ago momentum signal. The fallback when authored strategies fail." },
+  { id: "dual_momentum", name: "dual_momentum", source: "builtin", description: "Combined absolute + relative momentum across two lookback windows." },
+  { id: "breakout", name: "breakout", source: "builtin", description: "Range breakout above/below recent N-bar high/low." },
+  { id: "donchian_channel", name: "donchian_channel", source: "builtin", description: "20-bar Donchian channel breakout — canonical Turtle entry." },
+  { id: "ma_crossover", name: "ma_crossover", source: "builtin", description: "Simple moving-average crossover (fast/slow SMA)." },
+  { id: "ema_crossover", name: "ema_crossover", source: "builtin", description: "Classic 12/26 EMA crossover with zero-lag entry confirmation." },
+  { id: "macd_signal", name: "macd_signal", source: "builtin", description: "MACD line vs signal line with histogram momentum." },
+  { id: "adx_filter", name: "adx_filter", source: "builtin", description: "ADX(14) trend-strength gate — only fires above threshold." },
+  { id: "supertrend", name: "supertrend", source: "builtin", description: "Supertrend(10, 3) directional bias on ATR bands." },
+  { id: "ichimoku_signal", name: "ichimoku_signal", source: "builtin", description: "Ichimoku cloud + Tenkan/Kijun cross signal." },
+  // ── mean reversion ────────────────────────────────────────────────────────
+  { id: "z_score", name: "z_score", source: "builtin", description: "Rolling z-score reversion against the N-bar mean." },
+  { id: "bollinger_reversion", name: "bollinger_reversion", source: "builtin", description: "Fade outer Bollinger bands back to the 20-SMA midline." },
+  { id: "rsi_signal", name: "rsi_signal", source: "builtin", description: "RSI(14) reversion on >70 / <30 extremes." },
+  { id: "stochastic_signal", name: "stochastic_signal", source: "builtin", description: "Stochastic %K/%D oversold/overbought crossover." },
+  { id: "range_sr", name: "range_sr", source: "builtin", description: "Support/resistance bounce inside detected price range." },
+  // ── volatility ────────────────────────────────────────────────────────────
+  { id: "atr_breakout", name: "atr_breakout", source: "builtin", description: "ATR-band breakout with volume confirmation." },
+  { id: "bollinger_squeeze", name: "bollinger_squeeze", source: "builtin", description: "Detect Bollinger squeeze and trade the expansion direction." },
+  { id: "keltner_bollinger", name: "keltner_bollinger", source: "builtin", description: "Keltner-vs-Bollinger band-width regime filter." },
+  // ── volume ────────────────────────────────────────────────────────────────
+  { id: "vwap_deviation", name: "vwap_deviation", source: "builtin", description: "Mean-revert on price deviation from session VWAP." },
+  { id: "obv_trend", name: "obv_trend", source: "builtin", description: "On-Balance-Volume slope as trend confirmation." },
+  { id: "funding_bias_stub", name: "funding_bias_stub", source: "builtin", description: "Perp funding-rate bias signal (stub — feed wiring pending)." },
+  // ── statistical ───────────────────────────────────────────────────────────
+  { id: "linear_regression_channel", name: "linear_regression_channel", source: "builtin", description: "Linear-regression channel mean-reversion against ±2σ bands." },
+  { id: "kalman_fair_value", name: "kalman_fair_value", source: "builtin", description: "Kalman-filter fair-value estimate; trade deviations from it." },
+  // ── risk sizing ───────────────────────────────────────────────────────────
+  { id: "kelly_size", name: "kelly_size", source: "builtin", description: "Fractional-Kelly position sizing from win-rate/payoff estimates." },
+  { id: "vol_scaling_mult", name: "vol_scaling_mult", source: "builtin", description: "Inverse-volatility size multiplier — caps risk per tick." },
+  // ── time filters ──────────────────────────────────────────────────────────
+  { id: "session_filter", name: "session_filter", source: "builtin", description: "Trade only inside configured UTC session windows." },
+  { id: "day_of_week_filter", name: "day_of_week_filter", source: "builtin", description: "Skip configured weekdays (e.g. illiquid weekends)." },
+  // ── marketplace fork ──────────────────────────────────────────────────────
   {
     id: "vwap_meanrev_v2",
     name: "vwap_meanrev_v2",

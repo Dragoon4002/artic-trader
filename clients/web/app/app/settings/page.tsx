@@ -5,13 +5,16 @@ import { useState } from "react"
 import { PageHeader } from "@/components/dashboard/empty-state"
 import { PendingHub } from "@/components/dashboard/pending-hub"
 import { DemoBadge } from "@/components/dashboard/demo-badge"
+import { Skeleton } from "@/components/dashboard/skeleton"
 import { useWallet } from "@/hooks/use-wallet"
+import { useApiKeyHint, useSessions } from "@/hooks/use-queries"
 import { displayName, shortenAddr } from "@/lib/identity"
-import { CHAIN_ID } from "@/lib/chain"
-import { demoApiKeyHint, demoSessionKeys } from "@/lib/demo-data"
+import { CHAIN_ID, ROLLUP_CHAIN_ID } from "@/lib/chain"
 
 export default function SettingsPage() {
   const { address, username, autoSign, openWallet, disconnect } = useWallet()
+  const { data: sessions = [], isLoading: sessionsLoading } = useSessions()
+  const { data: apiKeyHint, isLoading: apiKeyLoading } = useApiKeyHint()
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     if (!address) return
@@ -32,6 +35,11 @@ export default function SettingsPage() {
           <div>
             <p className="text-sm font-semibold text-foreground">{displayName(address, username)}</p>
             <p className="mt-0.5 font-mono text-xs text-foreground/50">{shortenAddr(address)}</p>
+            <p className="mt-2 font-mono text-[11px] text-foreground/40">
+              L1: <span className="text-foreground/60">{CHAIN_ID}</span>
+              <span className="mx-1.5 text-foreground/20">·</span>
+              rollup: <span className="text-foreground/60">{ROLLUP_CHAIN_ID}</span>
+            </p>
           </div>
           <button
             onClick={copy}
@@ -57,22 +65,45 @@ export default function SettingsPage() {
       >
         <p className="text-sm text-foreground/60">
           {isAutoSignEnabled
-            ? "Dashboard mutations submit without a wallet popup until the grantee session expires."
-            : "Open Wallet Manager to enable Auto-Sign — one approval skips popups on every dashboard action."}
+            ? "Agent on-chain log + trade txs submit without popups until the grantee session expires. This is Artic's native-feature primitive: agents act autonomously."
+            : "Enable Auto-Sign to let your agents sign DecisionLogger / TradeLogger txs without per-tx popups. One approval = one bonded session key."}
         </p>
-        <button
-          onClick={openWallet}
-          className="mt-4 inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold hover:border-[var(--color-orange)]/40"
-        >
-          <ExternalLink size={12} />
-          Open Wallet Manager
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {!isAutoSignEnabled && autoSign?.enable && (
+            <button
+              onClick={() => autoSign.enable(CHAIN_ID).catch(() => undefined)}
+              disabled={autoSign?.isLoading}
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--color-orange)]/40 bg-[var(--color-orange)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-orange-text)] hover:bg-[var(--color-orange)]/20 disabled:opacity-50"
+            >
+              {autoSign.isLoading ? "Enabling…" : "Enable Auto-Sign"}
+            </button>
+          )}
+          {isAutoSignEnabled && autoSign?.disable && (
+            <button
+              onClick={() => autoSign.disable(CHAIN_ID).catch(() => undefined)}
+              disabled={autoSign?.isLoading}
+              className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold hover:border-[var(--color-red)]/40 disabled:opacity-50"
+            >
+              {autoSign.isLoading ? "Disabling…" : "Disable Auto-Sign"}
+            </button>
+          )}
+          <button
+            onClick={openWallet}
+            className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold hover:border-[var(--color-orange)]/40"
+          >
+            <ExternalLink size={12} />
+            Open Wallet Manager
+          </button>
+        </div>
       </Section>
 
       <Section title="Hub sessions" right={<DemoBadge />}>
         <PendingHub what="List of hub-side session keys live under /auth/session." />
+        {sessionsLoading ? (
+          <Skeleton className="mt-3" height={120} />
+        ) : (
         <ul className="mt-3 divide-y divide-white/5 rounded-md border border-white/10 bg-white/[0.02]">
-          {demoSessionKeys.map((s, i) => (
+          {sessions.map((s, i) => (
             <li key={s.session_id} className="flex items-start justify-between gap-3 p-4">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -101,6 +132,7 @@ export default function SettingsPage() {
             </li>
           ))}
         </ul>
+        )}
       </Section>
 
       <Section title="API keys" right={<DemoBadge />}>
@@ -111,7 +143,12 @@ export default function SettingsPage() {
               API keys let non-browser clients (scripts, CI) reach the hub. One key per user.
             </p>
             <p className="mt-1.5 font-mono text-xs text-foreground/50">
-              current: <span className="rounded bg-white/[0.04] px-2 py-0.5">{demoApiKeyHint}</span>
+              current:{" "}
+              {apiKeyLoading ? (
+                <span className="text-foreground/30">loading…</span>
+              ) : (
+                <span className="rounded bg-white/[0.04] px-2 py-0.5">{apiKeyHint ?? "none"}</span>
+              )}
             </p>
           </div>
           <button

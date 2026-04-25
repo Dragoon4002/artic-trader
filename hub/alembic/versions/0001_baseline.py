@@ -21,6 +21,11 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # No-op: 0002_wallet_auth is the first real migration.
+    # The original baseline created an email/password users table that was
+    # superseded before any environment ran it; keeping this empty avoids the
+    # DuplicateTable conflict against 0002 on fresh DBs.
+    return
     op.create_table(
         "users",
         sa.Column("id", sa.String, primary_key=True),
@@ -179,6 +184,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    return
     op.drop_table("onchain_trades")
     op.drop_table("onchain_decisions")
     op.drop_table("log_entries")

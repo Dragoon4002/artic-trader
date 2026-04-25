@@ -28,6 +28,12 @@ services:
     env_file: .env.dev
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@hub-db:5432/${POSTGRES_DB}
+      # HUB_PORT: 9000
+    volumes:
+      # Tarballs are produced by scripts/build_images.sh after the hub image
+      # is built — mount them in at runtime so /internal/v1/images/* can
+      # serve them without a rebuild.
+      - ./hub/docker/images:/app/hub/docker/images:ro
     depends_on:
       hub-db:
         condition: service_healthy
@@ -66,6 +72,7 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET:-artic-dev-internal-secret}
       AGENT_IMAGE: ${AGENT_IMAGE:-artic-app:dev}
       AGENT_NETWORK: artic-dev
+      USER_SERVER_INTERNAL_URL: http://user-server:8000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # spawner needs host Docker
     depends_on:

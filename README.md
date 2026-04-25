@@ -1,5 +1,49 @@
 # Artic — AI-Powered Multi-Agent Crypto Trading Platform
 
+## Initia Hackathon Submission
+
+- **Project Name**: Artic
+
+### Project Overview
+
+Artic is an LLM-orchestrated multi-agent paper-trading platform built on its
+own Initia EVM rollup. Each user gets isolated agent containers (one per
+symbol) where Gemini 2.5 Pro selects from 30+ quantitative strategies and
+supervises risk in real time. Every supervisor decision and trade close is
+written immutably to `DecisionLogger` / `TradeLogger` contracts on the
+rollup — turning the dashboard into a forensic audit log of why the AI
+acted, not just what it did.
+
+### Implementation Detail
+
+- **The Custom Implementation**: Hub orchestrates per-user Morph VMs that
+  spawn Docker agent containers; each agent runs its own FastAPI trading
+  loop with a 30+-strategy library and an LLM supervisor that re-plans every
+  60s. Decisions and trades are hashed and emitted on-chain via web3.py from
+  inside the agent container. Live log + decision streams ride a hub→VM
+  WebSocket reverse proxy so the dashboard sees reasoning in real time.
+- **The Native Feature**: **auto-signing** via InterwovenKit session keys.
+  Agents bond a session-key grantee to the user's wallet and submit on-chain
+  log txs with no per-tx popup. This is the autonomy primitive — without it,
+  every supervisor tick would block on a wallet prompt. Identity is also
+  surfaced via **Initia Usernames** (`.init`) wherever the wallet is shown.
+
+### How to Run Locally
+
+1. `cp .env.dev .env` and fill in `INITIA_RPC_URL`, `INITIA_PRIVATE_KEY`,
+   `INITIA_CHAIN_ID` (your rollup chain ID from `weave init`).
+2. `docker compose -f docker-compose.dev.yml up --build` — boots hub +
+   user-server + Postgres.
+3. `cd clients/web && bun install && bun dev` — dashboard at
+   `http://localhost:3000`. Connect via InterwovenKit, click Settings →
+   Enable Auto-Sign, then create an agent.
+4. Optional — redeploy contracts to your rollup:
+   `INITIA_RPC_URL=… INITIA_PRIVATE_KEY=… INITIA_CHAIN_ID=… python contracts/deploy.py && python contracts/deploy_trade_logger.py`.
+
+Submission manifest: [`.initia/submission.json`](.initia/submission.json).
+
+---
+
 Artic is a production-ready, LLM-orchestrated trading platform. A central **Hub** server spawns and manages isolated **Agent** containers — one per trading symbol — each running its own FastAPI trading engine backed by 30+ quantitative strategies. An LLM supervisor selects strategies and manages risk dynamically in real time. Four client interfaces (TUI, CLI, Telegram bot, and a Next.js web app) all connect exclusively through the Hub.
 
 ---

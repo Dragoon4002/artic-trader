@@ -134,8 +134,36 @@ def compute_strategy_signal(
     if strategy_lower == "funding_oi_filter":
         return _signal_funding_oi_filter(plan, price_history, candles)
 
+    if strategy_lower == "demo_mode":
+        return _signal_demo_mode(prices)
+
     # Default: momentum
     return simple_momentum(prices, lookback=lookback)
+
+
+def _signal_demo_mode(prices: List[float]) -> Tuple[float, str]:
+    """Reliable-fire strategy for demos. Triggers a signal every few ticks
+    based on the most recent micro-momentum, regardless of strict thresholds.
+    Sign of the last 3-tick delta determines side; magnitude is clamped so
+    the supervisor still has room to override.
+
+    Not for production — deliberately overtrades.
+    """
+    if len(prices) < 4:
+        return 0.0, "demo: warming up"
+    recent = prices[-4:]
+    delta = recent[-1] - recent[0]
+    if recent[0] == 0:
+        return 0.0, "demo: zero base"
+    bps = (delta / recent[0]) * 10_000
+    # clamp to a small but non-zero signal so the engine takes action
+    if bps == 0:
+        sig = 0.6 if recent[-1] >= recent[-2] else -0.6
+    else:
+        sig = max(-1.0, min(1.0, bps))
+        if abs(sig) < 0.4:
+            sig = 0.4 if sig >= 0 else -0.4
+    return sig, f"demo: {bps:+.2f} bps over 4 ticks"
 
 
 def _signal_trend_following(

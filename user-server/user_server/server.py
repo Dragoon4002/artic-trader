@@ -14,6 +14,9 @@ from .db.base import get_sessionmaker
 from .hub_callback.router import router as hub_router
 from .indexer import flusher
 from .indexer.query import router as indexer_query_router
+from .trades.query import router as trades_query_router
+from .logs.query import router as logs_query_router
+from .logs.ws import router as logs_ws_router
 from .llm.router import router as llm_router
 from .otel import setup as otel_setup
 from .strategies.router import router as strategies_router
@@ -54,6 +57,9 @@ app.include_router(agent_push_router)
 app.include_router(strategies_router)
 app.include_router(llm_router)
 app.include_router(indexer_query_router)
+app.include_router(trades_query_router)
+app.include_router(logs_query_router)
+app.include_router(logs_ws_router)
 app.include_router(hub_router)
 
 

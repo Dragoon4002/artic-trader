@@ -6,7 +6,7 @@ import { FlaskConical } from "lucide-react"
  */
 export function DemoBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-yellow-400">
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-amber)]/14 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-amber)]">
       <FlaskConical size={10} />
       demo
     </span>

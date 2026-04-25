@@ -1,6 +1,6 @@
 "use client";
 
-import { Navbar } from "@/components/landing/navbar";
+import { Navbar } from "@/components/newlanding/navbar";
 import { Footer } from "@/components/landing/footer";
 import Link from "next/link";
 import { ArrowLeft, Clock, Calendar, Menu } from "lucide-react";
@@ -36,7 +36,7 @@ function LitepaperSidebar({ activeId }: { activeId: string }) {
     <aside className="hidden lg:block w-60 shrink-0 border-r border-white/8 sticky top-16 h-[calc(100vh-64px)]">
       <ScrollArea className="h-full">
         <nav className="py-8 pr-4 pl-6">
-          <p className="text-xs tracking-[1.5px] uppercase text-orange-light mb-4 font-semibold">
+          <p className="text-xs tracking-[1.5px] uppercase text-accent-gray mb-4 font-semibold">
             Litepaper
           </p>
           <ul className="space-y-1">
@@ -47,7 +47,7 @@ function LitepaperSidebar({ activeId }: { activeId: string }) {
                   className={cn(
                     "block py-1.5 px-3 rounded-lg text-sm transition-colors",
                     activeId === s.id
-                      ? "bg-orange/15 text-orange-text font-medium"
+                      ? "bg-accent-gray/15 text-accent-gray font-medium"
                       : "text-white/50 hover:text-white/80 hover:bg-white/5"
                   )}
                 >
@@ -81,7 +81,7 @@ function MobileLitepaperNav({ activeId }: { activeId: string }) {
         <SheetContent side="left" className="bg-surface border-white/8 w-64">
           <SheetTitle className="sr-only">Litepaper Sections</SheetTitle>
           <nav className="mt-6">
-            <p className="text-xs tracking-[1.5px] uppercase text-orange-light mb-4 font-semibold px-2">
+            <p className="text-xs tracking-[1.5px] uppercase text-accent-gray mb-4 font-semibold px-2">
               Litepaper
             </p>
             <ul className="space-y-1">
@@ -92,7 +92,7 @@ function MobileLitepaperNav({ activeId }: { activeId: string }) {
                     className={cn(
                       "block py-1.5 px-3 rounded-lg text-sm transition-colors",
                       activeId === s.id
-                        ? "bg-orange/15 text-orange-text font-medium"
+                        ? "bg-accent-gray/15 text-accent-gray font-medium"
                         : "text-white/50 hover:text-white/80 hover:bg-white/5"
                     )}
                   >
@@ -115,7 +115,7 @@ function MobileLitepaperNav({ activeId }: { activeId: string }) {
 
 function Tag({ children }: { children: string }) {
   return (
-    <span className="text-xs uppercase tracking-wider font-semibold text-orange-text bg-orange/15 px-3 py-1 rounded-full">
+    <span className="text-xs uppercase tracking-wider font-semibold text-accent-gray bg-accent-gray/15 px-3 py-1 rounded-full">
       {children}
     </span>
   );
@@ -147,7 +147,7 @@ function P({ children }: { children: React.ReactNode }) {
 }
 
 function Highlight({ children }: { children: string }) {
-  return <span className="text-orange-text font-medium">{children}</span>;
+  return <span className="text-accent-gray font-medium">{children}</span>;
 }
 
 function Callout({
@@ -158,10 +158,10 @@ function Callout({
   variant?: "info" | "warning";
 }) {
   const border =
-    variant === "warning" ? "border-red/30" : "border-orange/30";
-  const bg = variant === "warning" ? "bg-red/10" : "bg-orange/10";
+    variant === "warning" ? "border-red/30" : "border-accent-gray/30";
+  const bg = variant === "warning" ? "bg-red/10" : "bg-accent-gray/10";
   const text =
-    variant === "warning" ? "text-red-light" : "text-orange-text";
+    variant === "warning" ? "text-red-light" : "text-accent-gray";
   return (
     <div className={`my-8 p-6 rounded-xl border ${border} ${bg}`}>
       <p className={`text-[15px] ${text} leading-relaxed`}>{children}</p>
@@ -171,7 +171,7 @@ function Callout({
 
 function Code({ children }: { children: string }) {
   return (
-    <code className="text-[15px] text-orange-text bg-orange/15 px-1.5 py-0.5 rounded font-mono">
+    <code className="text-[15px] text-accent-gray bg-accent-gray/15 px-1.5 py-0.5 rounded font-mono">
       {children}
     </code>
   );
@@ -237,7 +237,7 @@ function StepCard({
 }) {
   return (
     <div className="flex gap-5 p-5 rounded-xl border border-white/8 bg-white/3">
-      <span className="text-2xl font-bold text-orange/50 font-mono shrink-0">
+      <span className="text-2xl font-bold text-accent-gray/50 font-mono shrink-0">
         {step}
       </span>
       <div>
@@ -350,7 +350,7 @@ export default function LitepaperPage() {
                 ],
               ].map(([title, desc]) => (
                 <div key={title} className="flex gap-4">
-                  <span className="text-orange-text font-semibold text-[15px] shrink-0 w-32">
+                  <span className="text-accent-gray font-semibold text-[15px] shrink-0 w-32">
                     {title}
                   </span>
                   <span className="text-[15px] text-white/50">{desc}</span>
@@ -496,7 +496,7 @@ export default function LitepaperPage() {
                     "Python / FastAPI",
                     "Agent lifecycle, auth, market cache, REST + WebSocket API",
                   ],
-                  color: "text-orange-text",
+                  color: "text-accent-gray",
                 },
                 {
                   cells: [
@@ -528,7 +528,7 @@ export default function LitepaperPage() {
                     "PostgreSQL",
                     "Trade history, agent configs, user settings, position snapshots",
                   ],
-                  color: "text-orange-light",
+                  color: "text-accent-gray",
                 },
                 {
                   cells: [
@@ -646,7 +646,7 @@ export default function LitepaperPage() {
                     "10",
                     "simple_momentum, dual_momentum, breakout, donchian_channel, ma_crossover, ema_crossover, macd_signal, adx_filter, supertrend, ichimoku_signal",
                   ],
-                  color: "text-orange-text",
+                  color: "text-accent-gray",
                 },
                 {
                   cells: [
@@ -678,7 +678,7 @@ export default function LitepaperPage() {
                     "2",
                     "linear_regression_channel, kalman_fair_value",
                   ],
-                  color: "text-orange-light",
+                  color: "text-accent-gray",
                 },
               ]}
             />
@@ -700,7 +700,7 @@ export default function LitepaperPage() {
 
             <div className="my-8 p-6 rounded-2xl border border-white/10 bg-white/3 font-mono text-base shadow-[0_4px_24px_-4px_rgba(0,0,0,0.3)]">
               <p className="text-white/70">
-                <span className="text-orange-text">def</span>{" "}
+                <span className="text-accent-gray">def</span>{" "}
                 <span className="text-teal-light">strategy</span>(prices,
                 candles, **params) →{" "}
                 <span className="text-red-light">
@@ -817,7 +817,7 @@ export default function LitepaperPage() {
                     "LLM providers — strategy selection, regime analysis",
                     "Live",
                   ],
-                  color: "text-orange-text",
+                  color: "text-accent-gray",
                 },
                 {
                   cells: [
@@ -849,7 +849,7 @@ export default function LitepaperPage() {
                     "Perpetual futures execution — primary mainnet integration",
                     "In Progress",
                   ],
-                  color: "text-orange-light",
+                  color: "text-accent-gray",
                 },
               ]}
             />
@@ -882,7 +882,7 @@ export default function LitepaperPage() {
                     "Multi-Agent & Mainnet — multi-agent orchestration from a single hub, VM deployment, live execution on HashKey Global perps, web dashboard + Telegram bot",
                     "In Progress",
                   ],
-                  color: "text-orange-text",
+                  color: "text-accent-gray",
                 },
                 {
                   cells: [

@@ -1,0 +1,230 @@
+{
+  "info": {
+    "_postman_id": "artic-dev-0001",
+    "name": "Artic — dev flow",
+    "description": "End-to-end: wake the VM, create an agent, start it, tear it down. Assumes you already have a JWT from /auth/test/v1 in the web client (Postman can't ADR-36 sign).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0 · Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{HUB_URL}}/health", "host": ["{{HUB_URL}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "0b · Set LLM secret (Anthropic)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"key_name\": \"ANTHROPIC_API_KEY\",\n  \"value\": \"{{ANTHROPIC_API_KEY}}\"\n}"
+        },
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/secrets",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "secrets"]
+        },
+        "description": "Encrypted at rest on hub. Pushed to user-server in-memory on every wake. Agents will 401 on LLM calls until this is set."
+      }
+    },
+    {
+      "name": "0c · Set LLM secret (OpenAI)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"key_name\": \"OPENAI_API_KEY\",\n  \"value\": \"{{OPENAI_API_KEY}}\"\n}"
+        },
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/secrets",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "secrets"]
+        }
+      }
+    },
+    {
+      "name": "0d · List secret keys",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/secrets",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "secrets"]
+        },
+        "description": "Returns key names only. Plaintext/ciphertext never leaves hub."
+      }
+    },
+    {
+      "name": "1 · Wake VM (list agents)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents"]
+        },
+        "description": "First call cold-wakes the VM from MORPH_GOLDEN_SNAPSHOT_ID. 202 VM_WAKING means retry in Retry-After seconds. Eventually 200 [] on success."
+      }
+    },
+    {
+      "name": "2 · Create agent",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 or 200', () => pm.expect([200, 201]).to.include(pm.response.code));",
+              "const body = pm.response.json();",
+              "if (body.id) pm.environment.set('AGENT_ID', body.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"BTC momentum\",\n  \"symbol\": \"BTCUSDT\",\n  \"llm_provider\": \"anthropic\",\n  \"llm_model\": \"claude-sonnet-4-5\",\n  \"strategy_pool\": [\"ema_crossover\"],\n  \"risk_params\": {\n    \"amount_usdt\": 500,\n    \"leverage\": 5,\n    \"poll_seconds\": 1.0,\n    \"supervisor_interval\": 60,\n    \"tp_pct\": 1.5,\n    \"sl_pct\": 0.8\n  }\n}"
+        },
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents"]
+        },
+        "description": "Creates the agent row inside the VM's Postgres. No container yet — that happens on /start. Test script auto-saves id → AGENT_ID env var."
+      }
+    },
+    {
+      "name": "2b · List agents",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents"]
+        }
+      }
+    },
+    {
+      "name": "3 · Start agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents/{{AGENT_ID}}/start",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents", "{{AGENT_ID}}", "start"]
+        },
+        "description": "Spawns `docker run artic-agent:v0` inside the VM. Response shows status=alive + container_id + port."
+      }
+    },
+    {
+      "name": "4 · Get agent",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents/{{AGENT_ID}}",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents", "{{AGENT_ID}}"]
+        }
+      }
+    },
+    {
+      "name": "4b · Start-all",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents/start-all",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents", "start-all"]
+        }
+      }
+    },
+    {
+      "name": "5 · Stop agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents/{{AGENT_ID}}/stop",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents", "{{AGENT_ID}}", "stop"]
+        }
+      }
+    },
+    {
+      "name": "6 · Kill switch (stop all)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents/stop-all",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents", "stop-all"]
+        }
+      }
+    },
+    {
+      "name": "7 · Delete agent",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": {
+          "raw": "{{HUB_URL}}/api/v1/u/agents/{{AGENT_ID}}",
+          "host": ["{{HUB_URL}}"],
+          "path": ["api", "v1", "u", "agents", "{{AGENT_ID}}"]
+        },
+        "description": "204 No Content on success."
+      }
+    },
+    {
+      "name": "8 · Who am I",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{JWT}}" }
+        ],
+        "url": { "raw": "{{HUB_URL}}/auth/me", "host": ["{{HUB_URL}}"], "path": ["auth", "me"] }
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+1vCPU
+4GB vRAM
+4GB Disk
+
+40000 / 250 = 160

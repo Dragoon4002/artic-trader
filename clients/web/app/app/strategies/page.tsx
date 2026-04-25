@@ -2,36 +2,39 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Library, Plus, Trash2, Upload, Code } from "lucide-react"
+import { ArrowRight, Library, Plus, Trash2, Upload, Code } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/empty-state"
 import { PendingHub } from "@/components/dashboard/pending-hub"
 import { DemoBadge } from "@/components/dashboard/demo-badge"
-import {
-  demoAuthoredStrategies,
-  demoInstalledStrategies,
-  DemoStrategy,
-} from "@/lib/demo-data"
+import { Skeleton } from "@/components/dashboard/skeleton"
+import { useStrategies } from "@/hooks/use-queries"
+import type { StrategySourceT } from "@/lib/schemas"
 
 type Tab = "installed" | "authored"
 
-const SOURCE_TONE: Record<DemoStrategy["source"], string> = {
-  builtin: "border-white/15 bg-white/[0.04] text-foreground/70",
-  marketplace: "border-[var(--color-blue-accent)]/30 bg-[var(--color-blue-accent)]/10 text-[var(--color-blue-light)]",
-  authored: "border-[var(--color-orange)]/30 bg-[var(--color-orange)]/10 text-[var(--color-orange-text)]",
+const SOURCE_TONE: Record<StrategySourceT, string> = {
+  builtin: "bg-white/[0.05] text-foreground/75",
+  marketplace:
+    "bg-[var(--color-blue-accent)]/12 text-[var(--color-blue-light)]",
+  authored:
+    "bg-[var(--color-accent-warm-soft)] text-[var(--color-accent-warm)]",
 }
 
 export default function StrategiesPage() {
   const [tab, setTab] = useState<Tab>("installed")
-  const list = tab === "installed" ? demoInstalledStrategies : demoAuthoredStrategies
+  const { data, isLoading } = useStrategies()
+  const installed = data?.installed ?? []
+  const authored = data?.authored ?? []
+  const list = tab === "installed" ? installed : authored
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <PageHeader
         title="Strategies"
         subtitle="Built-in, marketplace-installed, and your authored strategies."
         action={
           <Link
             href="/app/strategies/new"
-            className="inline-flex items-center gap-2 rounded-md border border-[var(--color-orange)]/40 bg-[var(--color-orange)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-orange-text)] hover:bg-[var(--color-orange)]/20"
+            className="focus-ring inline-flex items-center gap-2 rounded-md bg-[var(--color-accent-warm)] px-4 py-2 text-sm font-semibold text-[var(--color-surface)] shadow-[0_8px_24px_-12px_rgba(232,162,122,0.7)] transition hover:bg-[var(--color-accent-warm-hover)]"
           >
             <Plus size={14} /> New strategy
           </Link>
@@ -40,94 +43,115 @@ export default function StrategiesPage() {
 
       <PendingHub what="Installed + authored strategies are served from your user-server." />
 
-      <div className="flex items-center gap-2 text-xs text-foreground/50">
+      <div className="flex items-center gap-2 text-xs text-foreground/55">
         <DemoBadge />
         <span>
-          {demoInstalledStrategies.length} installed · {demoAuthoredStrategies.length} authored (demo)
+          {installed.length} installed · {authored.length} authored (demo)
         </span>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-white/10">
+      <div className="flex items-center gap-1 border-b border-[rgba(194,203,212,0.08)]">
         <TabBtn
-          label={`Installed (${demoInstalledStrategies.length})`}
+          label={`Installed (${installed.length})`}
           active={tab === "installed"}
           onClick={() => setTab("installed")}
         />
         <TabBtn
-          label={`Authored (${demoAuthoredStrategies.length})`}
+          label={`Authored (${authored.length})`}
           active={tab === "authored"}
           onClick={() => setTab("authored")}
         />
       </div>
 
-      {list.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.01] p-10 text-center">
-          {tab === "installed" ? (
-            <Library size={22} className="mx-auto text-[var(--color-orange)]" />
-          ) : (
-            <Upload size={22} className="mx-auto text-[var(--color-orange)]" />
-          )}
-          <p className="mt-4 text-sm text-foreground/60">
-            {tab === "installed" ? "No strategies installed." : "No authored strategies."}
+      {isLoading ? (
+        <Skeleton height={200} />
+      ) : list.length === 0 ? (
+        <div className="surface flex flex-col items-center justify-center p-14 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-accent-warm-soft)] text-[var(--color-accent-warm)]">
+            {tab === "installed" ? (
+              <Library size={20} />
+            ) : (
+              <Upload size={20} />
+            )}
+          </div>
+          <p className="mt-5 text-sm text-foreground/65">
+            {tab === "installed"
+              ? "No strategies installed."
+              : "No authored strategies."}
           </p>
+          <div className="mt-5">
+            <Link
+              href={
+                tab === "installed" ? "/app/marketplace" : "/app/strategies/new"
+              }
+              className="focus-ring inline-flex items-center gap-1.5 rounded-md bg-[var(--color-accent-warm)] px-4 py-2 text-xs font-semibold text-[var(--color-surface)] hover:bg-[var(--color-accent-warm-hover)]"
+            >
+              {tab === "installed" ? "Browse marketplace" : "Author one"}
+              <ArrowRight size={12} />
+            </Link>
+          </div>
         </div>
       ) : (
-        <ul className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/[0.02]">
+        <ul className="surface divide-y divide-[rgba(194,203,212,0.05)] overflow-hidden">
           {list.map((s) => (
             <li
               key={s.id}
-              className="flex items-start justify-between gap-4 p-4 transition hover:bg-white/[0.02]"
+              className="flex flex-col gap-4 p-5 transition hover:bg-white/[0.015] md:flex-row md:items-start md:justify-between"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate font-mono text-sm font-semibold text-foreground">{s.name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-mono text-sm font-semibold tracking-tight text-foreground">
+                    {s.name}
+                  </p>
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${SOURCE_TONE[s.source]}`}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${SOURCE_TONE[s.source]}`}
                   >
                     {s.source}
                   </span>
                   {s.installs != null && (
-                    <span className="text-[11px] text-foreground/40">{s.installs} installs</span>
+                    <span className="num-tabular text-[11px] text-foreground/50">
+                      {s.installs} installs
+                    </span>
                   )}
                   {s.author && (
-                    <span className="text-[11px] text-foreground/40">by {s.author}</span>
+                    <span className="text-[11px] text-foreground/50">
+                      by {s.author}
+                    </span>
                   )}
                 </div>
-                <p className="mt-1.5 text-sm text-foreground/60">{s.description}</p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/65">
+                  {s.description}
+                </p>
                 {s.updated_at && (
-                  <p className="mt-1 font-mono text-[11px] text-foreground/40">
+                  <p className="mt-1.5 font-mono text-[11px] text-foreground/45">
                     edited {s.updated_at.slice(0, 10)}
                   </p>
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {tab === "authored" && (
-                  <button
+                  <ActionBtn
                     disabled
-                    title="Hub auth wiring pending"
-                    className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-foreground/40"
-                  >
-                    <Code size={12} /> Edit
-                  </button>
+                    icon={<Code size={12} />}
+                    label="Edit"
+                    tone="neutral"
+                  />
                 )}
                 {s.source !== "builtin" && (
-                  <button
+                  <ActionBtn
                     disabled
-                    title="Hub auth wiring pending"
-                    className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-[var(--color-red)]/30 bg-white/[0.02] px-2.5 py-1.5 text-xs text-[var(--color-red-light)] opacity-60"
-                  >
-                    <Trash2 size={12} />
-                    Remove
-                  </button>
+                    icon={<Trash2 size={12} />}
+                    label="Remove"
+                    tone="danger"
+                  />
                 )}
                 {s.source === "authored" && (
-                  <button
+                  <ActionBtn
                     disabled
-                    title="Hub auth wiring pending"
-                    className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-[var(--color-orange)]/30 bg-[var(--color-orange)]/5 px-2.5 py-1.5 text-xs text-[var(--color-orange-text)] opacity-70"
-                  >
-                    <Upload size={12} /> Publish
-                  </button>
+                    icon={<Upload size={12} />}
+                    label="Publish"
+                    tone="accent"
+                  />
                 )}
               </div>
             </li>
@@ -135,13 +159,14 @@ export default function StrategiesPage() {
         </ul>
       )}
 
-      {tab === "installed" && (
+      {tab === "installed" && list.length > 0 && (
         <div className="flex justify-end">
           <Link
             href="/app/marketplace"
-            className="text-xs text-foreground/50 underline-offset-4 hover:text-foreground hover:underline"
+            className="focus-ring inline-flex items-center gap-1.5 rounded text-xs text-foreground/55 transition hover:text-foreground"
           >
-            Browse marketplace →
+            Browse marketplace
+            <ArrowRight size={12} />
           </Link>
         </div>
       )}
@@ -149,16 +174,58 @@ export default function StrategiesPage() {
   )
 }
 
-function TabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function TabBtn({
+  label,
+  active,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  onClick: () => void
+}) {
   return (
     <button
       onClick={onClick}
-      className={`-mb-px border-b-2 px-4 py-2.5 text-sm transition ${
+      className={`focus-ring relative -mb-px px-4 py-2.5 text-sm transition-colors ${
         active
-          ? "border-[var(--color-orange)] text-foreground"
-          : "border-transparent text-foreground/50 hover:text-foreground/80"
+          ? "text-foreground"
+          : "text-foreground/55 hover:text-foreground/85"
       }`}
     >
+      {label}
+      {active && (
+        <span className="pointer-events-none absolute inset-x-4 -bottom-px h-[2px] rounded-full bg-[var(--color-accent-warm)]" />
+      )}
+    </button>
+  )
+}
+
+function ActionBtn({
+  icon,
+  label,
+  disabled,
+  tone,
+}: {
+  icon: React.ReactNode
+  label: string
+  disabled?: boolean
+  tone: "neutral" | "danger" | "accent"
+}) {
+  const base =
+    "focus-ring inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition"
+  const toneCls =
+    tone === "danger"
+      ? "bg-[var(--color-red)]/10 text-[var(--color-red-light)] hover:bg-[var(--color-red)]/15"
+      : tone === "accent"
+        ? "bg-[var(--color-accent-warm-soft)] text-[var(--color-accent-warm)] hover:bg-[var(--color-accent-warm)]/18"
+        : "bg-white/[0.05] text-foreground/80 hover:bg-white/[0.08] hover:text-foreground"
+  return (
+    <button
+      disabled={disabled}
+      title={disabled ? "Hub auth wiring pending" : undefined}
+      className={`${base} ${toneCls} ${disabled ? "btn-disabled" : ""}`}
+    >
+      {icon}
       {label}
     </button>
   )

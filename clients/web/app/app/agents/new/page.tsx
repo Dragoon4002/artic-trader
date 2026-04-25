@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -8,7 +9,6 @@ import {
   Eye,
   EyeOff,
   Fuel,
-  KeyRound,
   Play,
   ShieldAlert,
   Sparkles,
@@ -16,11 +16,9 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/empty-state"
 import { PendingHub } from "@/components/dashboard/pending-hub"
+import { Toggle } from "@/components/dashboard/toggle"
 import {
   AgentFormState,
-  LLM_MODELS,
-  LLM_PROVIDERS,
-  LlmProvider,
   RISK_PROFILES,
   SYMBOLS,
   TIMEFRAMES,
@@ -28,11 +26,71 @@ import {
   defaultAgentForm,
   toCreatePayload,
 } from "@/lib/agent-form"
+import { useHubAuth } from "@/hooks/use-hub-auth"
+import { signedFetch } from "@/lib/signed-fetch"
 
 export default function NewAgentPage() {
+  const router = useRouter()
+  const { token, status: authStatus, run: hubSignIn, hydrated: authHydrated } = useHubAuth()
+
+  // Auto sign-in to hub if no valid token (key already in localStorage).
+  useEffect(() => {
+    if (authHydrated && !token && authStatus === "idle") hubSignIn()
+  }, [authHydrated, token, authStatus, hubSignIn])
+
   const [form, setForm] = useState<AgentFormState>(defaultAgentForm)
+  const [geminiApiKey, setGeminiApiKey] = useState("")
   const [showKey, setShowKey] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const payload = useMemo(() => toCreatePayload(form), [form])
+
+  const handleSubmit = async () => {
+    if (!token) { console.warn("[create-agent] no token"); return }
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await signedFetch("/api/v1/secrets", { method: "POST", body: { key_name: "GEMINI_API_KEY", value: geminiApiKey } })
+      const backendBody = {
+        name: payload.name,
+        symbol: payload.symbol,
+        llm_provider: "gemini",
+        llm_model: "gemini-2.5-pro",
+        strategy_pool: [],
+        risk_params: {
+          amount_usdt: payload.amount_usdt,
+          leverage: payload.leverage,
+          poll_seconds: payload.poll_seconds,
+          supervisor_interval: payload.supervisor_interval,
+          tp_pct: payload.tp_pct ?? null,
+          sl_pct: payload.sl_pct ?? null,
+        },
+      }
+      console.log("[create-agent] POST /api/v1/u/agents", backendBody)
+      const result = await signedFetch<{ id: string }>("/api/v1/u/agents", { method: "POST", body: backendBody })
+      console.log("[create-agent] created", result)
+      if (form.auto_start && result?.id) {
+        try {
+          console.log("[create-agent] POST /api/v1/u/agents/:id/start", result.id)
+          await signedFetch(`/api/v1/u/agents/${result.id}/start`, { method: "POST" })
+        } catch (startErr: unknown) {
+          // Non-fatal — agent was created; user can start manually.
+          const msg = startErr instanceof Error ? startErr.message : String(startErr)
+          console.warn("[create-agent] auto-start failed", msg)
+          setSubmitError(`Agent created but auto-start failed: ${msg}`)
+          setSubmitting(false)
+          return
+        }
+      }
+      router.push(result?.id ? `/app/agents/${result.id}` : "/app/agents")
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error("[create-agent] error", msg)
+      setSubmitError(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const set = <K extends keyof AgentFormState>(k: K, v: AgentFormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
@@ -54,7 +112,8 @@ export default function NewAgentPage() {
       <PendingHub what="Submit sends a signed POST /api/agents with the body shown in the right panel." />
 
       <form
-        onSubmit={(e) => e.preventDefault()}
+        noValidate
+        onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
         className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]"
       >
         <div className="space-y-8">
@@ -202,73 +261,28 @@ export default function NewAgentPage() {
             </div>
           </Section>
 
-          <Section icon={<Sparkles size={15} />} title="LLM" hint="Provider + model + optional per-agent key override.">
-            <Grid cols={2}>
-              <Field label="Provider">
-                <div className="grid grid-cols-4 gap-2">
-                  {LLM_PROVIDERS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => {
-                        set("llm_provider", p)
-                        // sensible default model per provider
-                        set("llm_model", LLM_MODELS[p][0])
-                      }}
-                      className={`rounded-md border px-2 py-2 text-xs font-semibold transition ${
-                        form.llm_provider === p
-                          ? "border-[var(--color-orange)]/60 bg-[var(--color-orange)]/10 text-[var(--color-orange-text)]"
-                          : "border-white/10 bg-white/[0.02] text-foreground/60 hover:text-foreground"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-              <Field label="Model" helper="Pick a suggestion or type any id the provider exposes.">
+          <Section icon={<Sparkles size={15} />} title="LLM" hint="Gemini 2.5 Pro is the only supported model in alpha.">
+            <Field label="Gemini API Key">
+              <div className="relative">
                 <input
-                  className={inputCls}
-                  list="llm-models"
-                  value={form.llm_model}
-                  onChange={(e) => set("llm_model", e.target.value)}
+                  required
+                  className={`${inputCls} pr-10`}
+                  type={showKey ? "text" : "password"}
+                  placeholder="AIza..."
+                  autoComplete="off"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
                 />
-                <datalist id="llm-models">
-                  {LLM_MODELS[form.llm_provider as LlmProvider].map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
-              </Field>
-            </Grid>
-            <div className="mt-5">
-              <Field
-                label={
-                  <span className="inline-flex items-center gap-1.5">
-                    <KeyRound size={11} /> Per-agent API key override
-                  </span>
-                }
-                helper="Leave blank to use the key stored in Settings. Encrypted before storage."
-              >
-                <div className="relative">
-                  <input
-                    className={`${inputCls} pr-10`}
-                    type={showKey ? "text" : "password"}
-                    placeholder="sk-…"
-                    autoComplete="off"
-                    value={form.llm_api_key}
-                    onChange={(e) => set("llm_api_key", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey((v) => !v)}
-                    className="absolute inset-y-0 right-2 my-auto flex h-6 w-6 items-center justify-center rounded text-foreground/40 hover:text-foreground"
-                    aria-label={showKey ? "Hide key" : "Show key"}
-                  >
-                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-              </Field>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setShowKey((v) => !v)}
+                  className="absolute inset-y-0 right-2 my-auto flex h-6 w-6 items-center justify-center rounded text-foreground/40 hover:text-foreground"
+                  aria-label={showKey ? "Hide key" : "Show key"}
+                >
+                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </Field>
           </Section>
 
           <Section icon={<Timer size={15} />} title="Behavior" hint="Lifecycle flags.">
@@ -289,20 +303,22 @@ export default function NewAgentPage() {
             </Grid>
           </Section>
 
+          {submitError && (
+            <p className="text-right text-xs text-(--color-red-light)">{submitError}</p>
+          )}
           <div className="flex items-center justify-end gap-3">
             <Link
               href="/app/agents"
-              className="rounded-md border border-white/10 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-foreground/70 transition hover:text-foreground"
+              className="rounded-md border border-white/10 bg-white/2 px-4 py-2 text-sm font-semibold text-foreground/70 transition hover:text-foreground"
             >
               Cancel
             </Link>
             <button
               type="submit"
-              disabled
-              title="Hub auth wiring pending"
-              className="cursor-not-allowed rounded-md border border-[var(--color-orange)]/40 bg-[var(--color-orange)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-orange-text)] opacity-50"
+              disabled={!token || submitting}
+              className="rounded-md border border-(--color-orange)/40 bg-(--color-orange)/10 px-4 py-2 text-sm font-semibold text-(--color-orange-text) transition hover:bg-(--color-orange)/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {form.auto_start ? "Create + start" : "Create"}
+              {submitting ? "Creating…" : authStatus === "running" ? "Signing in…" : form.auto_start ? "Create + start" : "Create"}
             </button>
           </div>
         </div>
@@ -352,8 +368,7 @@ function SummaryPanel({
           }
         />
         <Row k="Session cap" v={`${(form.max_session_loss_pct * 100).toFixed(0)}%`} />
-        <Row k="LLM" v={`${form.llm_provider} · ${form.llm_model || "—"}`} />
-        <Row k="BYOK" v={form.llm_api_key ? "overridden" : "use stored"} />
+        <Row k="LLM" v="gemini · gemini-2.5-pro" />
         <Row k="Auto-start" v={form.auto_start ? "yes" : "no"} />
         <Row k="Mode" v={form.live_mode ? "LIVE" : "paper"} />
       </div>
@@ -461,21 +476,7 @@ function ToggleField({
         <p className="text-sm font-semibold text-foreground/90">{label}</p>
         {helper && <p className="mt-0.5 text-[11px] text-foreground/50">{helper}</p>}
       </div>
-      <button
-        type="button"
-        onClick={() => !disabled && onChange(!checked)}
-        disabled={disabled}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-          checked ? "bg-[var(--color-orange)]" : "bg-white/[0.08]"
-        } ${disabled ? "cursor-not-allowed" : ""}`}
-        aria-pressed={checked}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-            checked ? "translate-x-5" : "translate-x-0.5"
-          }`}
-        />
-      </button>
+      <Toggle checked={checked} onChange={onChange} disabled={disabled} label={label} />
     </div>
   )
 }

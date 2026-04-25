@@ -33,6 +33,9 @@ class NonceResponse(BaseModel):
     nonce: str
     message: str
     expires_at: str
+    # Authoritative `issued_at` string — clients MUST sign using this verbatim.
+    # Hub rebuilds the message with the same string at /auth/verify time.
+    issued_at: str
 
 
 class VerifyRequest(BaseModel):
@@ -82,8 +85,6 @@ async def issue_nonce(
     db: AsyncSession = Depends(get_session),
 ):
     _assert_chain_supported(body.chain)
-    # Nonce itself lives in a row; client must also know the exact message it
-    # will sign at /verify. We build it lazily there from the same inputs.
     nonce = service.generate_nonce()
     expires_at = _now() + timedelta(seconds=settings.AUTH_NONCE_TTL_SECONDS)
     row = AuthNonce(
@@ -94,21 +95,24 @@ async def issue_nonce(
     )
     db.add(row)
     await db.commit()
-    # Build a preview message the client can display; the real signed message
-    # also includes session_pub + expires which the client supplies at verify.
+    await db.refresh(row)  # pull the DB-stamped created_at back out
+    issued_at_iso = row.created_at.isoformat()
+    # Preview message for display — uses the same issued_at the client will
+    # sign with. session_pub / session_expires_at slots remain placeholders.
     placeholder = service.build_signin_message(
         chain=body.chain,
         address=body.address,
         nonce=nonce,
         session_pub="<session_pub>",
         session_scope="authenticated-actions",
-        issued_at=_now(),
-        session_expires_at=_now() + timedelta(seconds=settings.AUTH_SESSION_TTL_SECONDS),
+        issued_at_iso=issued_at_iso,
+        session_expires_at_iso="<session_expires_at>",
     )
     return NonceResponse(
         nonce=nonce,
         message=placeholder,
         expires_at=expires_at.isoformat(),
+        issued_at=issued_at_iso,
     )
 
 
@@ -141,7 +145,13 @@ async def verify_signature(
         raise HTTPException(status_code=400, detail="session_expires_at in the past")
     max_expiry = _now() + timedelta(seconds=settings.AUTH_SESSION_TTL_SECONDS)
     if session_expires > max_expiry:
-        session_expires = max_expiry
+        # Reject instead of silently clamping — any rewrite here would break
+        # the client's signature (the exact string it signed must survive to
+        # the rebuild below).
+        raise HTTPException(
+            status_code=400,
+            detail=f"session_expires_at exceeds max {settings.AUTH_SESSION_TTL_SECONDS}s",
+        )
 
     message = service.build_signin_message(
         chain=body.chain,
@@ -149,8 +159,9 @@ async def verify_signature(
         nonce=body.nonce,
         session_pub=body.session_pub,
         session_scope=body.session_scope,
-        issued_at=nonce_row.created_at,
-        session_expires_at=session_expires,
+        issued_at_iso=nonce_row.created_at.isoformat(),
+        # Verbatim — the client signed exactly this string.
+        session_expires_at_iso=body.session_expires_at,
     )
 
     verifier = get_verifier(body.chain)

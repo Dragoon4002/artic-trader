@@ -56,6 +56,10 @@ class FakeProvider:
         self._probes += 1
         return self._probes > self._healthy_after
 
+    async def get_status(self, vm_id: str) -> str | None:
+        self.calls.append(("get_status", (vm_id,)))
+        return "ready"
+
 
 @pytest.fixture
 async def vm_setup(db_engine, monkeypatch):

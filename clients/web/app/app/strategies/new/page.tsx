@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/empty-state"
 import { PendingHub } from "@/components/dashboard/pending-hub"
+import { Toggle } from "@/components/dashboard/toggle"
 import {
   ALLOWED_BUILTINS,
   ALLOWED_IMPORTS,
@@ -99,6 +100,16 @@ export default function NewStrategyPage() {
           </div>
         }
       />
+
+      <div className="flex items-center gap-3 rounded-xl border border-[var(--color-orange)]/40 bg-[var(--color-orange)]/10 px-5 py-3.5 text-sm">
+        <Info size={16} className="shrink-0 text-[var(--color-orange)]" />
+        <div className="flex-1">
+          <p className="font-semibold text-[var(--color-orange-text)]">Authoring custom strategies — coming soon</p>
+          <p className="mt-0.5 text-[12px] text-foreground/60">
+            The sandboxed editor is preview-only. Save / publish endpoints land with the next user-server release.
+          </p>
+        </div>
+      </div>
 
       <PendingHub what="POST /u/strategies proxied to user-server; publish_to_marketplace triggers a follow-up POST /marketplace." />
 
@@ -326,20 +337,12 @@ function PublishCard({
             Makes this strategy installable by other users. 3+ reports in 7 days auto-hides it.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setPublish(!publish)}
-          className={`relative h-5 w-9 shrink-0 rounded-full transition ${
-            publish ? "bg-[var(--color-orange)]" : "bg-white/[0.08]"
-          }`}
-          aria-pressed={publish}
-        >
-          <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-              publish ? "translate-x-[18px]" : "translate-x-0.5"
-            }`}
-          />
-        </button>
+        <Toggle
+          checked={publish}
+          onChange={setPublish}
+          size="sm"
+          label="Publish to marketplace"
+        />
       </div>
     </div>
   )

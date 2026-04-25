@@ -7,6 +7,7 @@ a thin wrapper over the same endpoints and keeps this module dependency-light.
 from __future__ import annotations
 
 import logging
+import shlex
 
 import httpx
 
@@ -42,11 +43,7 @@ class MorphProvider:
             r = await client.post(
                 f"{self.base_url}/api/instance",
                 headers=self._headers(),
-                json={
-                    "snapshot_id": snapshot_id,
-                    "ttl_seconds": 240,
-                    "ttl_action": "pause",
-                },
+                json={"snapshot_id": snapshot_id},
             )
         if r.status_code >= 400:
             raise VMProviderError(f"instance start failed: {r.status_code} {r.text}")
@@ -76,37 +73,71 @@ class MorphProvider:
         no external registry. AGENT_IMAGE is passed through so user-server
         spawns agents from the sibling image also baked into the snapshot.
         """
+        # Golden snapshot only creates the empty `artic` DB — Alembic runs at
+        # wake time so user-server finds its schema on first boot. The baked
+        # alembic.ini in the v0 image has host-relative paths, so we bypass
+        # the ini entirely and drive alembic programmatically.
+        py_migrate = (
+            "from alembic.config import Config; from alembic import command; "
+            "c=Config(); "
+            "c.set_main_option('script_location','/app/alembic'); "
+            "c.set_main_option('prepend_sys_path','/app'); "
+            "command.upgrade(c,'head')"
+        )
+        migrate_cmd = (
+            "docker run --rm --network host "
+            "-e DATABASE_URL=postgresql+asyncpg://artic:artic@localhost:5432/artic "
+            f"artic-user-server:{self.image_tag} python -c \"{py_migrate}\""
+        )
+        await self._exec(vm_id, migrate_cmd, timeout=120.0)
+        # Create a dedicated user-defined bridge so (a) docker embedded DNS
+        # resolves agent container names and (b) agents don't collide with
+        # user-server on host :8000. user-server stays on --network host so
+        # Morph's HTTP tunnel can expose it directly.
+        await self._exec(
+            vm_id,
+            "docker network inspect artic-dev >/dev/null 2>&1 || docker network create artic-dev",
+            timeout=30.0,
+        )
         run_cmd = (
+            "docker rm -f user-server 2>/dev/null; "
             "docker run -d --rm --name user-server "
             "-v /var/run/docker.sock:/var/run/docker.sock "
             "--network host "
-            "-e DATABASE_URL=postgresql+asyncpg://artic@localhost:5432/artic "
+            "-e DATABASE_URL=postgresql+asyncpg://artic:artic@localhost:5432/artic "
             f"-e HUB_URL={self.hub_url} "
             f"-e USER_ID={user_id} "
             f"-e USER_TOKEN={user_token} "
             f"-e HUB_SECRET={settings.INTERNAL_SECRET} "
             f"-e INTERNAL_SECRET={settings.INTERNAL_SECRET} "
             f"-e AGENT_IMAGE=artic-agent:{self.image_tag} "
-            "-e AGENT_NETWORK=bridge "
-            "-p 80:8000 "
+            "-e AGENT_NETWORK=artic-dev "
+            "-e USER_SERVER_INTERNAL_URL=http://host.docker.internal:8000 "
             f"artic-user-server:{self.image_tag}"
         )
-        await self._exec(vm_id, f"bash -lc '{run_cmd}'", timeout=120.0)
-        # Healthz poll before exposing — fixes the morph-server.md §4 502-race.
+        await self._exec(vm_id, run_cmd, timeout=120.0)
+        # Health poll before exposing — fixes the morph-server.md §4 502-race.
         await self._exec(
             vm_id,
-            "bash -lc 'for i in $(seq 1 30); do curl -fs http://localhost:80/healthz && exit 0; sleep 1; done; exit 1'",
+            "for i in $(seq 1 30); do curl -fs http://localhost:8000/health && exit 0; sleep 1; done; exit 1",
             timeout=45.0,
         )
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.post(
                 f"{self.base_url}/api/instance/{vm_id}/http",
                 headers=self._headers(),
-                json={"name": "user-server", "port": 80},
+                json={"name": "user-server", "port": 8000},
             )
         if r.status_code >= 400:
             raise VMProviderError(f"exposeHttpService failed: {r.status_code} {r.text}")
-        return r.json().get("url", "")
+        body = r.json()
+        services = body.get("networking", {}).get("http_services", [])
+        url = next(
+            (s.get("url") for s in services if s.get("name") == "user-server"), ""
+        )
+        if not url:
+            raise VMProviderError(f"exposeHttpService returned no url: {body}")
+        return url
 
     async def snapshot(self, vm_id: str) -> str:
         async with httpx.AsyncClient(timeout=120.0) as client:
@@ -145,12 +176,38 @@ class MorphProvider:
         except Exception:
             return False
 
-    async def _exec(self, vm_id: str, command: str, timeout: float) -> None:
+    async def get_status(self, vm_id: str) -> str | None:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.get(
+                    f"{self.base_url}/api/instance/{vm_id}",
+                    headers=self._headers(),
+                )
+        except Exception as e:
+            logger.warning("get_status %s failed: %s", vm_id, e)
+            return None
+        if r.status_code == 404:
+            return None
+        if r.status_code >= 400:
+            logger.warning("get_status %s non-200: %s %s", vm_id, r.status_code, r.text)
+            return None
+        return r.json().get("status")
+
+    async def _exec(self, vm_id: str, script: str, timeout: float) -> None:
+        """Run `script` as a bash login-shell command.
+
+        Morph's /exec endpoint takes `command` as a list but **joins the
+        elements with spaces** before passing the result to `bash -c`, so argv
+        semantics don't apply. We pre-quote the whole thing with shlex so
+        Morph's join doesn't shred our quoting, then wrap in bash -lc to pick
+        up the profile PATH inside the VM (docker, psql, etc.).
+        """
+        wrapped = f"bash -lc {shlex.quote(script)}"
         async with httpx.AsyncClient(timeout=timeout) as client:
             r = await client.post(
                 f"{self.base_url}/api/instance/{vm_id}/exec",
                 headers=self._headers(),
-                json={"command": command},
+                json={"command": [wrapped]},
             )
         if r.status_code >= 400:
             raise VMProviderError(f"exec failed: {r.status_code} {r.text}")

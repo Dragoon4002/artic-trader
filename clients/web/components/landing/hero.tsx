@@ -38,24 +38,24 @@ export function Hero() {
       </p>
 
       {/* Actions */}
-      <div className="relative z-10 flex gap-3 items-center flex-wrap justify-center">
+      <div className="relative z-10 flex gap-3 justify-center flex-wrap">
         <Link
           href="/docs/quickstart"
           className={cn(
             buttonVariants(),
-            "bg-orange hover:bg-orange-hover text-white rounded-[10px] px-7 py-6 text-[15px] font-medium transition-transform hover:-translate-y-0.5"
+            "bg-orange hover:bg-orange-hover text-white rounded-[10px] px-7 py-6 text-[15px] font-medium"
           )}
         >
           Get early access
         </Link>
         <Link
-          href="/docs"
+          href="#"
           className={cn(
             buttonVariants({ variant: "outline" }),
             "border-white/20 text-white/70 hover:border-white/50 hover:text-white rounded-[10px] px-7 py-6 text-[15px] font-medium bg-transparent"
           )}
         >
-          Read the docs
+          View on GitHub
         </Link>
       </div>
 

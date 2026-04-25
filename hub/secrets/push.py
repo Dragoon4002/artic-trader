@@ -8,6 +8,7 @@ persist on the user-server disk — they sit in process memory only.
 from __future__ import annotations
 
 import logging
+import os
 
 import httpx
 from sqlalchemy import select
@@ -35,6 +36,11 @@ async def push(user_id: str, vm_endpoint: str) -> None:
             payload[row.key_name] = crypto.decrypt(row.encrypted_value)
         except Exception as e:
             logger.warning("decrypt failed for %s / %s: %s", user_id, row.key_name, e)
+
+    for env_key in ("TWELVE_DATA_API_KEY",):
+        val = os.getenv(env_key, "").strip()
+        if val:
+            payload[env_key] = val
 
     if not payload:
         return

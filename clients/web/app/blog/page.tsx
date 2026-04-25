@@ -1,4 +1,4 @@
-import { Navbar } from "@/components/landing/navbar";
+import { Navbar } from "@/components/newlanding/navbar";
 import { Footer } from "@/components/landing/footer";
 import Link from "next/link";
 import { ArrowRight, Clock, Calendar } from "lucide-react";

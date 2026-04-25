@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     AGENT_IMAGE: str = "artic-app:dev"
     AGENT_NETWORK: str = "artic-dev"
     DOCKER_HOST: str = ""  # empty -> docker SDK uses /var/run/docker.sock
+    USER_SERVER_INTERNAL_URL: str = "http://host.docker.internal:8000"
 
     # Chain signing
     CHAIN_RPC_URL: str = ""

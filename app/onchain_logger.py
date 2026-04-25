@@ -1,9 +1,11 @@
-"""Log supervisor decisions to HashKey Chain via DecisionLogger contract."""
+"""Log supervisor decisions to Initia rollup via DecisionLogger contract."""
 import os
 import json
 import hashlib
 from typing import Optional
 from web3 import Web3
+
+from app.chain_config import get_rpc_url, get_private_key
 
 # Strategy name → uint8 index mapping
 STRATEGY_INDEX = {
@@ -18,6 +20,7 @@ STRATEGY_INDEX = {
     "dpo": 22, "cmo": 23, "trix": 24,
     "williams_r": 25, "cci": 26, "ultimate_oscillator": 27,
     "ichimoku": 28, "renko_trend": 29, "heikin_ashi_trend": 30,
+    "demo_mode": 31,
     "llm_auto": 255,
 }
 
@@ -28,8 +31,8 @@ class OnchainLogger:
     """Logs trading decisions to HashKey Chain DecisionLogger contract."""
 
     def __init__(self):
-        rpc = os.getenv("HSK_RPC_URL")
-        pk = os.getenv("HSK_PRIVATE_KEY")
+        rpc = get_rpc_url()
+        pk = get_private_key()
         deployed_path = os.path.join(
             os.path.dirname(__file__), "..", "contracts", "deployed.json"
         )

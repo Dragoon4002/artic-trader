@@ -28,7 +28,7 @@ const sections: {
     title: "Quickstart",
     description: "Install, configure, and launch your first trading agent in under 5 minutes.",
     href: "/docs/quickstart",
-    color: "bg-orange/20 text-orange-light",
+    color: "bg-accent-gray/20 text-accent-gray",
   },
   {
     icon: <Layers className="h-5 w-5" />,
@@ -49,7 +49,7 @@ const sections: {
     title: "Strategy Catalog",
     description: "Browse 30+ quant algorithms across momentum, mean reversion, volatility, volume, and statistical categories.",
     href: "/docs/strategies",
-    color: "bg-orange/20 text-orange-light",
+    color: "bg-accent-gray/20 text-accent-gray",
   },
   {
     icon: <Server className="h-5 w-5" />,
@@ -70,7 +70,7 @@ const sections: {
     title: "CLI Reference",
     description: "Interactive menu-driven CLI for agent creation, monitoring, and management.",
     href: "/docs/cli-reference",
-    color: "bg-orange/20 text-orange-light",
+    color: "bg-accent-gray/20 text-accent-gray",
   },
   {
     icon: <LayoutGrid className="h-5 w-5" />,
@@ -105,7 +105,7 @@ const sections: {
     title: "Testing",
     description: "Test structure, conventions, mocking external services, and strategy contract verification.",
     href: "/docs/testing",
-    color: "bg-orange/20 text-orange-light",
+    color: "bg-accent-gray/20 text-accent-gray",
   },
 ];
 
@@ -124,7 +124,7 @@ export default function DocsIndex() {
           <Link
             key={s.href}
             href={s.href}
-            className="group flex gap-4 p-5 rounded-xl border border-white/8 bg-white/3 transition-all duration-200 hover:border-orange-light/40 hover:bg-orange/6 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange/5"
+            className="group flex gap-4 p-5 rounded-xl border border-white/8 bg-white/3 transition-all duration-200 hover:border-accent-gray/40 hover:bg-accent-gray/6 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent-gray/5"
           >
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${s.color}`}>
               {s.icon}
@@ -132,7 +132,7 @@ export default function DocsIndex() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-sm font-semibold text-white">{s.title}</h3>
-                <ArrowRight className="h-3.5 w-3.5 text-white/30 group-hover:text-orange-light group-hover:translate-x-0.5 transition-all" />
+                <ArrowRight className="h-3.5 w-3.5 text-white/30 group-hover:text-accent-gray group-hover:translate-x-0.5 transition-all" />
               </div>
               <p className="text-[13px] text-white/45 leading-relaxed">{s.description}</p>
             </div>

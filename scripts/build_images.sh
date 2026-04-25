@@ -11,7 +11,7 @@ OUT_DIR="hub/docker/images"
 mkdir -p "$OUT_DIR"
 
 echo "=== build artic-agent:${RELEASE_TAG} ==="
-docker build -t "artic-agent:${RELEASE_TAG}" hub/docker/agent/
+docker build -t "artic-agent:${RELEASE_TAG}" -f app/Dockerfile .
 
 echo "=== build artic-user-server:${RELEASE_TAG} ==="
 docker build -t "artic-user-server:${RELEASE_TAG}" -f user-server/Dockerfile .

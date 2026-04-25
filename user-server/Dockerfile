@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY user-server/ /app/
 
 EXPOSE 8000
-CMD ["python", "-m", "user_server.server"]
+CMD ["sh", "-c", "alembic upgrade head && python -m user_server.server"]

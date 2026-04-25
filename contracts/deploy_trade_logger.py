@@ -1,8 +1,16 @@
-"""Deploy TradeLogger to HashKey Chain."""
+"""Deploy TradeLogger to the configured Initia rollup (or any EVM RPC)."""
 import os
 import json
 from web3 import Web3
 from solcx import compile_source, install_solc
+
+
+def _resolve(env_names):
+    for name in env_names:
+        v = os.getenv(name)
+        if v:
+            return v
+    return None
 
 
 def deploy():
@@ -21,20 +29,25 @@ def deploy():
     abi = contract_interface["abi"]
     bytecode = contract_interface["bin"]
 
-    rpc = os.getenv("HSK_RPC_URL")
-    pk = os.getenv("HSK_PRIVATE_KEY")
+    rpc = _resolve(["INITIA_RPC_URL", "CHAIN_RPC_URL", "HSK_RPC_URL"])
+    pk = _resolve(["INITIA_PRIVATE_KEY", "CHAIN_PRIVATE_KEY", "HSK_PRIVATE_KEY"])
+    chain_id_env = _resolve(["INITIA_CHAIN_ID", "CHAIN_ID"])
+
     if not rpc:
-        raise ValueError("HSK_RPC_URL not set")
+        raise ValueError("INITIA_RPC_URL not set")
     if not pk:
-        raise ValueError("HSK_PRIVATE_KEY not set")
+        raise ValueError("INITIA_PRIVATE_KEY not set")
 
     w3 = Web3(Web3.HTTPProvider(rpc))
     if not w3.is_connected():
         raise ConnectionError(f"Failed to connect to {rpc}")
 
+    detected_chain_id = w3.eth.chain_id
     account = w3.eth.account.from_key(pk)
     print(f"Deploying from: {account.address}")
-    print(f"Balance: {w3.eth.get_balance(account.address) / 1e18} HSK")
+    print(f"Chain ID (detected): {detected_chain_id}")
+    print(f"Rollup chain ID (env): {chain_id_env or '(unset)'}")
+    print(f"Balance: {w3.eth.get_balance(account.address) / 1e18}")
 
     Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
     tx = Contract.constructor().build_transaction({
@@ -59,6 +72,9 @@ def deploy():
             "abi": abi,
             "tx_hash": tx_hash.hex(),
             "block_number": receipt.blockNumber,
+            "chain_id": chain_id_env,
+            "evm_chain_id": detected_chain_id,
+            "rpc_url": rpc,
         }, f, indent=2)
 
     print(f"Saved to {deployed_path}")

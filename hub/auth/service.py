@@ -47,10 +47,16 @@ def build_signin_message(
     nonce: str,
     session_pub: str,
     session_scope: str,
-    issued_at: datetime,
-    session_expires_at: datetime,
+    issued_at_iso: str,
+    session_expires_at_iso: str,
 ) -> str:
-    """Canonical sign-in message. Client signs it verbatim."""
+    """Canonical sign-in message. Client signs it verbatim.
+
+    `issued_at_iso` and `session_expires_at_iso` are raw strings — callers
+    pass the exact values that were (or will be) echoed to the client, so
+    formatting drift (e.g. Python `+00:00` vs JS `Z` suffix, µs vs ms
+    precision) can't desync the signed bytes from the hub's rebuild.
+    """
     return (
         f"{settings.AUTH_MESSAGE_DOMAIN} wants you to sign in with your {chain} account:\n"
         f"{address}\n"
@@ -58,6 +64,6 @@ def build_signin_message(
         f"Session public key: {session_pub}\n"
         f"Scope: {session_scope}\n"
         f"Nonce: {nonce}\n"
-        f"Issued At: {issued_at.isoformat()}\n"
-        f"Expires At: {session_expires_at.isoformat()}"
+        f"Issued At: {issued_at_iso}\n"
+        f"Expires At: {session_expires_at_iso}"
     )

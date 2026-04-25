@@ -1,59 +1,66 @@
 # Hub Module — Artic
 
-Standalone FastAPI server. Owns agent lifecycle, user auth, secrets, market cache, and client-facing REST/WebSocket API.
+Central FastAPI orchestrator. Owns user auth, VM lifecycle (Morph), secrets management,
+market cache, and the client-facing REST/WebSocket API. Proxies all user-server calls
+via wake-proxy middleware (`/api/v1/u/*`).
 
 ## Folder Structure
 
 ```
 hub/
-├── server.py              # FastAPI entry, route registration
+├── server.py              # FastAPI entry, route registration, lifespan
 ├── config.py              # Settings (env-based)
-├── agents/                # Agent lifecycle
-│   ├── router.py          # /api/agents/* endpoints
-│   ├── service.py         # Agent spawn/stop logic
-│   └── registry.py        # In-memory live state cache
-├── docker/                # Container management
-│   ├── manager.py         # Docker SDK create/start/stop/remove
-│   └── ports.py           # Atomic thread-safe port allocation
-├── auth/                  # Wallet-connect authentication
+├── auth/                  # Wallet-connect authentication (Initia/Cosmos ADR-36)
 │   ├── router.py          # /auth/nonce, /auth/verify, /auth/refresh, /auth/me, /auth/session
-│   ├── service.py         # JWT, nonce, canonical sign-in message
+│   ├── service.py         # JWT, nonce, sign-in message
 │   ├── session.py         # session-key issue/verify/revoke + monotonic-nonce guard
-│   ├── initia_names.py    # .init reverse lookup + 24h cache
-│   ├── verifiers/         # chain-pluggable sig verifiers (cosmos_adr36.py for Initia)
+│   ├── initia_names.py    # .init username reverse lookup + 24h cache
+│   ├── verifiers/         # Chain-pluggable sig verifiers (cosmos_adr36.py)
 │   └── deps.py            # get_current_user + require_session_key
-├── internal/              # Agent→Hub push endpoints
+├── vm/                    # Morph VM lifecycle
+│   ├── service.py         # provision, wake, drain, stop, touch
+│   ├── provider.py        # Morph API client (start/stop/snapshot)
+│   ├── morph_provider.py  # Morph-specific impl
+│   └── registry.py        # In-memory VM state cache
+├── proxy/                 # Wake-proxy middleware + WS stub
+│   ├── middleware.py      # Intercepts /api/v1/u/* — wakes VM, forwards to user-server
+│   ├── forwarder.py       # httpx async forwarder (path rewrite: /api/v1/u/<x> → /<x>)
+│   └── ws.py              # WebSocket proxy stubs (/ws/u/agents/*/logs|status)
+├── internal/              # Hub-internal push endpoints (from agents via user-server)
 │   └── router.py          # /internal/agents/{id}/status, /trades, /logs
-├── ws/                    # WebSocket streaming
+├── ws/                    # WebSocket streaming to dashboard
 │   ├── manager.py         # Connection pool
 │   └── broadcaster.py     # Poll agents, push to WS clients
-├── market_cache/          # Centralized candle cache
-│   └── service.py         # APScheduler refresh, 60s staleness
-├── secrets/               # Secret management
-│   └── service.py         # Encrypted DB + ephemeral override
-├── db/                    # Database layer
-│   ├── base.py            # SQLAlchemy async engine, get_session
-│   └── models/            # ORM models (one per table)
-├── client.py              # Hub SDK (used by all clients)
+├── market_cache/          # Centralized candle cache (60s refresh)
+│   └── service.py
+├── secrets/               # Encrypted secret management
+│   └── service.py
+├── images/                # Serve agent/user-server Docker image tarballs to VMs
+│   └── router.py          # GET /internal/v1/images/<file>
+├── db/                    # SQLAlchemy async (PostgreSQL)
+│   ├── base.py
+│   └── models/            # users, user_vms, user_secrets, agents, trades, log_entries...
 └── alembic/               # DB migrations
 ```
 
 ## Exposes To Clients
 
-- Agent CRUD, status proxy, log streaming (WebSocket). State-changing endpoints require session-key headers (`X-Session-Id`, `X-Session-Nonce`, `X-Session-Sig`).
-- Auth: wallet-signature (Initia/Cosmos ADR-36) → JWT + session key; `.init` username resolved at login
-- Market candle cache (`GET /api/market/candles`)
+- `/api/v1/u/*` — proxied to user-server (wake-proxy, JWT auth)
+- `/auth/*` — Initia wallet auth (ADR-36 sig → JWT + session key)
+- `/api/market/candles` — cached candle data
+- `/ws/u/agents/*/logs` — WebSocket log streaming (stub, pending impl)
 
-## Receives From Agents (push-based)
+## Wake-Proxy Flow
 
-| Internal Endpoint | Auth | Purpose |
-|-------------------|------|---------|
-| POST /internal/agents/{id}/status | X-Internal-Secret | Status push every tick |
-| POST /internal/trades | X-Internal-Secret | Trade open/close events |
-| POST /internal/logs | X-Internal-Secret | Log batch every 10 ticks |
+1. Request hits `/api/v1/u/<path>`
+2. Middleware resolves user_id from JWT or API key
+3. Looks up VM in registry; if stopped → calls `vm_service.wake()`
+4. Forwards to `vm_endpoint/<path>` via `Forwarder` (strips auth headers, adds `X-Hub-Secret`)
+5. On success, touches `last_active_at`
 
 ## Docs
 
 - Auth: `/docs/connections/auth-flow.md`
 - Service map: `/docs/connections/service-map.md`
+- On-chain: `/docs/connections/onchain.md`
 - Data model: `/docs/architecture/data-model.md`

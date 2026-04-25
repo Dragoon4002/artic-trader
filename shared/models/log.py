@@ -14,8 +14,8 @@ class LogLevel(StrEnum):
 
 
 class LogEntry(BaseModel):
-    agent_id: str
-    level: LogLevel
+    agent_id: str | None = None  # may be injected at push_router level
+    level: str  # accepts any level string; DB stores as-is
     message: str
     ts: datetime
     fields: dict = Field(default_factory=dict)

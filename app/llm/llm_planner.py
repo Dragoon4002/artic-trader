@@ -338,8 +338,8 @@ Market Regime Summary:
 Suggested strategies: {', '.join(strategy_shortlist)}
 
 Return ONLY valid JSON:
-{{"strategy": "<name>", "lookback": <5-50>, "threshold": <0.0002-0.003>, "max_loss_pct": <0.01-0.05>}}
-For aggressive risk use lower threshold (0.0002-0.0005). Choose from: {', '.join(strategy_shortlist)}"""
+{{"strategy": "<name>", "lookback": <4-20>, "threshold": <0.00003-0.001>, "max_loss_pct": <0.01-0.05>}}
+For paper trading use threshold 0.00003-0.0001 to fire trades often (this is paper, not real money). Choose from: {', '.join(strategy_shortlist)}"""
         system = "Return valid JSON only. No other text."
         content = self._chat(system_content=system, user_content=prompt, temperature=0.3, max_tokens=1024, provider_override=llm_provider)
         content = _extract_json(content)
@@ -347,9 +347,9 @@ For aggressive risk use lower threshold (0.0002-0.0005). Choose from: {', '.join
 
     def _get_default_strategy(self, risk_profile: str) -> StrategyPlan:
         defaults = {
-            "conservative": StrategyPlan(strategy="momentum", lookback=15, threshold=0.001, max_loss_pct=0.015),
-            "moderate": StrategyPlan(strategy="momentum", lookback=10, threshold=0.0015, max_loss_pct=0.02),
-            "aggressive": StrategyPlan(strategy="momentum", lookback=6, threshold=0.0003, max_loss_pct=0.035),
+            "conservative": StrategyPlan(strategy="momentum", lookback=10, threshold=0.0003, max_loss_pct=0.015),
+            "moderate": StrategyPlan(strategy="momentum", lookback=6, threshold=0.0001, max_loss_pct=0.02),
+            "aggressive": StrategyPlan(strategy="momentum", lookback=4, threshold=0.00005, max_loss_pct=0.035),
         }
         return defaults.get(risk_profile.lower(), defaults["moderate"])
 
