@@ -254,9 +254,9 @@ function toClientStrategy(b: BackendStrategy): Strategy {
     id: b.id,
     name: b.name,
     source: b.source,
-    installed_at: b.created_at ?? new Date(0).toISOString(),
-    param_schema: null,
-  } as Strategy
+    description: "",
+    updated_at: b.created_at,
+  }
 }
 
 export async function listStrategies(): Promise<{
@@ -296,15 +296,22 @@ export async function listIndexer(filter: IndexerFilter): Promise<IndexerRow[]> 
   const body = await signedFetch<{ rows: BackendIndexerRow[] }>(
     `/api/v1/u/hub/indexer/since?ts=${encodeURIComponent(fromTs)}&limit=1000`,
   )
-  let rows: IndexerRow[] = body.rows.map((r) => ({
-    tx_hash: r.tx_hash,
-    agent_id: r.agent_id,
-    kind: r.kind as IndexerRow["kind"],
-    amount_usdt: r.amount_usdt != null ? Number(r.amount_usdt) : null,
-    block_number: r.block_number,
-    tags: r.tags as IndexerRow["tags"],
-    created_at: r.created_at,
-  }))
+  let rows: IndexerRow[] = body.rows.map((r) => {
+    const tags = (r.tags ?? {}) as Record<string, unknown>
+    const symbol = typeof tags.symbol === "string" ? tags.symbol : ""
+    const side =
+      tags.side === "long" || tags.side === "short" ? tags.side : undefined
+    return {
+      tx_hash: r.tx_hash,
+      agent_id: r.agent_id,
+      kind: r.kind as IndexerRow["kind"],
+      amount_usdt: r.amount_usdt != null ? Number(r.amount_usdt) : null,
+      symbol,
+      side,
+      block: r.block_number,
+      created_at: r.created_at,
+    }
+  })
   if (filter.kind) rows = rows.filter((r) => r.kind === filter.kind)
   if (filter.agent_id) rows = rows.filter((r) => r.agent_id.startsWith(filter.agent_id!))
   if (filter.min_amount != null)

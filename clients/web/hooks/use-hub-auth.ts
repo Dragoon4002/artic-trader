@@ -15,9 +15,9 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { secp256k1 } from "@noble/curves/secp256k1"
-import { sha256 } from "@noble/hashes/sha2"
-import { ripemd160 } from "@noble/hashes/legacy"
+import { secp256k1 } from "@noble/curves/secp256k1.js"
+import { sha256 } from "@noble/hashes/sha2.js"
+import { ripemd160 } from "@noble/hashes/legacy.js"
 import { bech32 } from "bech32"
 import { useInterwovenKit } from "@initia/interwovenkit-react"
 import {
@@ -142,7 +142,7 @@ export function useHubAuth() {
         const canonical = canonicalize(signDoc)
         const bytes = new TextEncoder().encode(canonical)
         const digest = sha256(bytes)
-        const sig = secp256k1.sign(digest, fallback.priv).toCompactRawBytes()
+        const sig = secp256k1.sign(digest, fallback.priv)
         pubkey_b64 = b64encode(fallback.pub)
         signature_b64 = b64encode(sig)
       } else {

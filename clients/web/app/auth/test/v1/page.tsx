@@ -18,9 +18,9 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { Check, Copy, Play, X as XIcon } from "lucide-react"
-import { secp256k1 } from "@noble/curves/secp256k1"
-import { sha256 } from "@noble/hashes/sha2"
-import { ripemd160 } from "@noble/hashes/legacy"
+import { secp256k1 } from "@noble/curves/secp256k1.js"
+import { sha256 } from "@noble/hashes/sha2.js"
+import { ripemd160 } from "@noble/hashes/legacy.js"
 import { bech32 } from "bech32"
 
 type StepStatus = "pending" | "running" | "ok" | "error"
@@ -334,7 +334,7 @@ async function runAuthFlow(opts: RunOpts) {
   onStep({ id: "sign", label: "ADR-36 sign message", status: "running" })
   const signDoc = buildAdr36SignDoc(address, message)
   const digest = sha256(signDoc)
-  const compactSig = secp256k1.sign(digest, walletPriv).toCompactRawBytes()
+  const compactSig = secp256k1.sign(digest, walletPriv)
   const signature_b64 = b64encode(compactSig)
   onStep({
     id: "sign",
