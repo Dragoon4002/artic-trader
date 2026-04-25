@@ -18,7 +18,23 @@ if config.config_file_name is not None:
 
 _url = os.environ.get("DATABASE_URL", "")
 if _url:
-    config.set_main_option("sqlalchemy.url", _url.replace("+asyncpg", "+psycopg2"))
+    # asyncpg uses ?ssl=require; psycopg2 expects ?sslmode=require.
+    # Neon (and most managed Postgres) requires SSL — translate so the same
+    # DATABASE_URL works for runtime (asyncpg) and migrations (psycopg2).
+    sync_url = _url.replace("+asyncpg", "+psycopg2")
+    if "?" in sync_url:
+        base, _, qs = sync_url.partition("?")
+        params = []
+        for kv in qs.split("&"):
+            if not kv:
+                continue
+            k, _eq, v = kv.partition("=")
+            if k == "ssl":
+                params.append(f"sslmode={v}")
+            else:
+                params.append(kv)
+        sync_url = base + "?" + "&".join(params)
+    config.set_main_option("sqlalchemy.url", sync_url)
 
 target_metadata = Base.metadata
 
