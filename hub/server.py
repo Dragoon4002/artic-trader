@@ -21,7 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .auth.router import api_keys_router
 from .auth.router import router as auth_router
 from .config import settings
-from .db.base import engine as db_engine
+from .db import models  # noqa: F401 — register all model metadata before create_all
+from .db.base import Base, engine as db_engine
 from .internal.images import router as images_router
 from .internal.router import router as internal_router
 from .market.price_feed import price_feed_loop
@@ -55,6 +56,14 @@ async def lifespan(app: FastAPI):
     global _scheduler, _price_feed_task
 
     mtls.load_ca()
+
+    # Ensure schema exists. CREATE TABLE IF NOT EXISTS for every registered
+    # model — bypasses alembic for initial provisioning. Idempotent; on
+    # subsequent boots this is a fast no-op.
+    async with db_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("schema bootstrap: %d tables present", len(Base.metadata.tables))
+
     await vm_service.hydrate()
 
     _scheduler = AsyncIOScheduler()

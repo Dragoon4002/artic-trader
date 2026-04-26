@@ -20,8 +20,6 @@ import { Skeleton } from "@/components/dashboard/skeleton"
 import { KillSwitch } from "@/components/dashboard/kill-switch"
 import type { Agent, AgentStatusT } from "@/lib/schemas"
 import type { DemoTrade } from "@/lib/demo-data"
-import { fmtInit, usdToInit } from "@/lib/currency"
-import { fakeProfitForAgent, generateDemoTradesFor, isFlatAgent } from "@/lib/demo-injector"
 
 const STATUS_TONE: Record<AgentStatusT, string> = {
   alive: "text-[var(--color-teal)] bg-[var(--color-teal)]/12",
@@ -34,35 +32,21 @@ const STATUS_TONE: Record<AgentStatusT, string> = {
 export default function AgentsPage() {
   const { address, username } = useWallet()
   const { data: agents = [], isLoading: agentsLoading } = useAgents()
-  const { data: realTrades = [], isLoading: tradesLoading } = useTrades()
-
-  // Merge real trades with deterministic demo trades for visual density.
-  const trades = useMemo(() => {
-    if (agents.length === 0) return realTrades
-    return [...realTrades, ...generateDemoTradesFor(agents)]
-  }, [agents, realTrades])
+  const { data: trades = [], isLoading: tradesLoading } = useTrades()
 
   const totals = useMemo(() => {
-    const flatIds = new Set(agents.filter(isFlatAgent).map((a) => a.id))
     const realisedByAgent: Record<string, number> = {}
     let realised = 0
     let tradeCount = 0
     let winCount = 0
     for (const t of trades) {
       if (t.pnl == null) continue
-      if (flatIds.has(t.agent_id)) continue // skip LINK & other flat agents
       realised += t.pnl
       realisedByAgent[t.agent_id] = (realisedByAgent[t.agent_id] ?? 0) + t.pnl
       tradeCount += 1
       if (t.pnl > 0) winCount += 1
     }
-    const unrealised = agents.reduce(
-      (sum, a) =>
-        isFlatAgent(a)
-          ? sum
-          : sum + (a.unrealised_pnl ?? 0) + fakeProfitForAgent(a.id).unrealised,
-      0,
-    )
+    const unrealised = agents.reduce((sum, a) => sum + (a.unrealised_pnl ?? 0), 0)
     return {
       realised,
       unrealised,
@@ -124,19 +108,19 @@ export default function AgentsPage() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <StatCard
             label="Total PnL"
-            value={fmtInit(totals.total)}
+            value={fmt(totals.total)}
             tone={toneOf(totals.total)}
-            hint={`${fmtInit(totals.realised)} realised · ${fmtInit(totals.unrealised)} open`}
+            hint={`${fmt(totals.realised)} realised · ${fmt(totals.unrealised)} open`}
           />
           <StatCard
             label="Realised"
-            value={fmtInit(totals.realised)}
+            value={fmt(totals.realised)}
             tone={toneOf(totals.realised)}
             hint="Closed trade PnL"
           />
           <StatCard
             label="Unrealised"
-            value={fmtInit(totals.unrealised)}
+            value={fmt(totals.unrealised)}
             tone={toneOf(totals.unrealised)}
             hint="Open positions"
           />
@@ -164,7 +148,7 @@ export default function AgentsPage() {
           <span
             className={`num-tabular font-mono text-base ${toneClass(totals.realised)}`}
           >
-            {fmtInit(totals.realised)}
+            {fmt(totals.realised)} USDT
           </span>
         </header>
         {loading ? (
@@ -223,12 +207,9 @@ function AgentCard({
   realised: number
   trades: readonly DemoTrade[]
 }) {
-  const flat = isFlatAgent(agent)
-  const fake = flat ? { realised: 0, unrealised: 0 } : fakeProfitForAgent(agent.id)
-  const unrealised = flat ? 0 : (agent.unrealised_pnl ?? 0) + fake.unrealised
+  const unrealised = agent.unrealised_pnl ?? 0
   const currentValue = agent.amount_usdt + unrealised
-  const realisedDisplay = flat ? 0 : realised
-  const valueTone = flat ? "text-foreground/60" : toneClass(unrealised)
+  const valueTone = toneClass(unrealised)
 
   return (
     <Link
@@ -255,27 +236,21 @@ function AgentCard({
           <div
             className={`num-tabular mt-1.5 font-mono text-[26px] font-semibold leading-none tracking-tight ${valueTone}`}
           >
-            {usdToInit(currentValue).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            <span className="ml-1 text-[14px] font-medium text-foreground/50">INIT</span>
+            <span className="text-foreground/50">$</span>
+            {currentValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>
         </div>
         <div className="text-right">
           <div className="label-xs">Realised</div>
-          <div className={`num-tabular mt-1.5 font-mono text-sm ${toneClass(realisedDisplay)}`}>
-            {fmtInit(realisedDisplay)}
+          <div className={`num-tabular mt-1.5 font-mono text-sm ${toneClass(realised)}`}>
+            {fmt(realised)}
           </div>
         </div>
       </div>
 
       {/* Chart */}
       <div className="relative h-[160px]">
-        {flat ? (
-          <div className="flex h-full items-center justify-center text-xs text-foreground/35">
-            No activity yet
-          </div>
-        ) : (
-          <PnlChartCard agent={agent} trades={trades} height={160} minimal />
-        )}
+        <PnlChartCard agent={agent} trades={trades} height={160} minimal />
       </div>
 
       <div className="flex items-center justify-between bg-[var(--color-surface-sunken)]/50 px-6 py-3 text-[11px] text-foreground/55">
@@ -398,3 +373,8 @@ function toneClass(v: number) {
   return "text-foreground/75"
 }
 
+function fmt(v: number) {
+  const abs = Math.abs(v)
+  const sign = v > 0 ? "+" : v < 0 ? "-" : ""
+  return `${sign}${abs.toFixed(2)}`
+}

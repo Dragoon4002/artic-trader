@@ -61,8 +61,15 @@ def run_migrations_online() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+    # Run schema-adoption on a SEPARATE connection with its own explicit
+    # transaction. Otherwise SQLAlchemy 2.x leaves an autobegin transaction
+    # open from `inspect()` calls, alembic nests under it, and when the
+    # connection closes the whole stack rolls back silently. Bit us on Neon.
+    with connectable.connect() as adopt_conn:
+        with adopt_conn.begin():
+            _adopt_existing_schema(adopt_conn)
+
     with connectable.connect() as connection:
-        _adopt_existing_schema(connection)
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()

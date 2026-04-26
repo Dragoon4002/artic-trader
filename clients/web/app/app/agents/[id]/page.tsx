@@ -13,8 +13,6 @@ import { useAgent, useDeleteAgent, useLogs, useStartAgent, useStopAgent, useTrad
 import { useHubAuth } from "@/hooks/use-hub-auth"
 import type { AgentStatusT, LogLevelT } from "@/lib/schemas"
 import { explorerTxUrl, shortHash } from "@/lib/chain"
-import { usdToInit } from "@/lib/currency"
-import { fakeProfitForAgent, generateDemoTrades } from "@/lib/demo-injector"
 
 const STATUS_TONE: Record<AgentStatusT, string> = {
   alive: "text-[var(--color-teal)] bg-[var(--color-teal)]/12",
@@ -42,12 +40,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const router = useRouter()
   const { token, status: authStatus, run: hubSignIn, hydrated: authHydrated } = useHubAuth()
   const { data: agent, isLoading: agentLoading } = useAgent(id)
-  const { data: realTrades = [], isLoading: tradesLoading } = useTrades(agent?.id)
-  const allTrades = useMemo(() => {
-    if (!agent) return realTrades
-    const target = fakeProfitForAgent(agent.id).realised
-    return [...realTrades, ...generateDemoTrades(agent.id, agent.symbol, target)]
-  }, [agent, realTrades])
+  const { data: allTrades = [], isLoading: tradesLoading } = useTrades(agent?.id)
   const { data: logs = [], isLoading: logsLoading } = useLogs(agent?.id ?? "")
   const startMut = useStartAgent()
   const stopMut = useStopAgent()
@@ -228,21 +221,22 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           />
           <Kv
             label="Unrealised PnL"
-            value={(() => {
-              const u = (agent.unrealised_pnl ?? 0) + fakeProfitForAgent(agent.id).unrealised
-              return u >= 0 ? (
-                <span className="text-[var(--color-teal)]">+{usdToInit(u).toFixed(2)} INIT</span>
+            value={
+              agent.unrealised_pnl == null ? (
+                <span className="text-foreground/40">—</span>
+              ) : agent.unrealised_pnl >= 0 ? (
+                <span className="text-[var(--color-teal)]">+{agent.unrealised_pnl.toFixed(2)} USDT</span>
               ) : (
-                <span className="text-[var(--color-red-light)]">{usdToInit(u).toFixed(2)} INIT</span>
+                <span className="text-[var(--color-red-light)]">{agent.unrealised_pnl.toFixed(2)} USDT</span>
               )
-            })()}
+            }
           />
           <Kv label="Strategy" value={<span className="font-mono">{agent.strategy}</span>} />
           <Kv label="LLM" value={`${agent.llm_provider} · ${agent.llm_model}`} />
         </Card>
 
         <Card title="Config">
-          <Kv label="Amount" value={`${usdToInit(agent.amount_usdt).toFixed(2)} INIT`} />
+          <Kv label="Amount" value={`${agent.amount_usdt} USDT`} />
           <Kv label="Leverage" value={`${agent.leverage}×`} />
           <Kv
             label="TP / SL"
