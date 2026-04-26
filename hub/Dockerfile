@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY hub/ ./hub/
 
 EXPOSE 9000
-CMD ["sh", "-c", "set -e; echo '── ONE-SHOT RESET: alembic downgrade base ──'; alembic -c hub/alembic.ini downgrade base; echo '── alembic upgrade head ──'; alembic -c hub/alembic.ini upgrade head; echo '── alembic current ──'; alembic -c hub/alembic.ini current; echo '── starting hub.server ──'; exec python -m hub.server"]
+CMD ["sh", "-c", "set -e; echo '── ONE-SHOT RESET: alembic stamp base ──'; alembic -c hub/alembic.ini stamp base; echo '── alembic upgrade head ──'; alembic -c hub/alembic.ini upgrade head; echo '── alembic current ──'; alembic -c hub/alembic.ini current; echo '── starting hub.server ──'; exec python -m hub.server"]
