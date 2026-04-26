@@ -18,10 +18,15 @@ if config.config_file_name is not None:
 
 _url = os.environ.get("DATABASE_URL", "")
 if _url:
+    # Render/Heroku give `postgres://…`; alembic + psycopg2 need a driver.
+    if _url.startswith("postgres://"):
+        _url = "postgresql://" + _url[len("postgres://"):]
     # asyncpg uses ?ssl=require; psycopg2 expects ?sslmode=require.
     # Neon (and most managed Postgres) requires SSL — translate so the same
     # DATABASE_URL works for runtime (asyncpg) and migrations (psycopg2).
     sync_url = _url.replace("+asyncpg", "+psycopg2")
+    if sync_url.startswith("postgresql://") and "+psycopg2" not in sync_url:
+        sync_url = "postgresql+psycopg2://" + sync_url[len("postgresql://"):]
     if "?" in sync_url:
         base, _, qs = sync_url.partition("?")
         params = []

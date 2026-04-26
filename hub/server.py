@@ -129,6 +129,10 @@ async def health_ready() -> dict:
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
 
-    uvicorn.run("hub.server:app", host="0.0.0.0", port=settings.HUB_PORT, reload=True)
+    # Render/Heroku-style platforms inject $PORT; fall back to settings.HUB_PORT.
+    port = int(os.environ.get("PORT") or settings.HUB_PORT)
+    reload = os.environ.get("ENV", "dev").lower() == "dev"
+    uvicorn.run("hub.server:app", host="0.0.0.0", port=port, reload=reload)

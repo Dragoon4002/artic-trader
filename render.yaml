@@ -1,0 +1,59 @@
+# Render Blueprint — deploys the Artic hub + Postgres.
+# Use: connect this repo on Render → "New Blueprint Instance" → pick this file.
+# Set the secret env vars marked `sync: false` in the dashboard after creation.
+
+databases:
+  - name: artic-hub-db
+    plan: free
+    databaseName: artic
+    user: artic
+
+services:
+  - type: web
+    name: artic-hub
+    runtime: docker
+    dockerfilePath: ./hub/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    # Run migrations once per deploy, before promoting. Failures here block
+    # the rollout (visible in build logs) instead of crashing at runtime.
+    preDeployCommand: alembic -c hub/alembic.ini upgrade head
+    envVars:
+      # Wired automatically from the managed DB above.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: artic-hub-db
+          property: connectionString
+
+      # Public URL of this service — used by VMs to call back. Render
+      # exposes RENDER_EXTERNAL_URL automatically.
+      - key: HUB_PUBLIC_URL
+        value: https://artic-hub.onrender.com
+
+      # CORS for the Vercel frontend.
+      - key: CORS_ALLOW_ORIGINS
+        value: https://artic-trade.vercel.app
+
+      # Auth TTLs (matches local .env.dev)
+      - key: JWT_EXPIRY_MINUTES
+        value: "720"
+      - key: REFRESH_EXPIRY_DAYS
+        value: "90"
+      - key: AUTH_SESSION_TTL_SECONDS
+        value: "604800"
+
+      # Set these in the Render dashboard (Environment tab) — never commit them.
+      - key: JWT_SECRET
+        sync: false
+      - key: KEK
+        sync: false
+      - key: INTERNAL_SECRET
+        sync: false
+      - key: MORPH_API_KEY
+        sync: false
+      - key: VM_PROVIDER
+        value: morph
+      - key: MORPH_BASE_URL
+        value: https://cloud.morph.so/api

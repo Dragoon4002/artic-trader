@@ -5,8 +5,21 @@ from sqlalchemy.orm import DeclarativeBase
 
 from ..config import settings
 
+
+def _normalize_async_url(url: str) -> str:
+    """Render/Heroku give `postgres://…`; SQLAlchemy needs `postgresql+asyncpg://…`."""
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+    # asyncpg rejects ?sslmode=…; expects ?ssl=require for managed Postgres.
+    if "sslmode=" in url:
+        url = url.replace("sslmode=require", "ssl=require").replace("sslmode=", "ssl=")
+    return url
+
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    _normalize_async_url(settings.DATABASE_URL),
     echo=False,
     pool_pre_ping=True,
     pool_recycle=300,

@@ -3,44 +3,67 @@
 ## Initia Hackathon Submission
 
 - **Project Name**: Artic
+- **Track**: AI / Tooling
+- **Rollup Chain ID**: `artic-1` (Initia EVM rollup, settled to `initiation-2`)
+- **DecisionLogger**: [`0x70a15Db526104abC2f021b7c690cd89a07EDE49C`](https://scan.testnet.initia.xyz/artic-1/tx/0x05b27ae7e95d76de95b7990e121629a87251ed2585e86295f3892fef9907c1de)
+- **TradeLogger**: [`0xeeb56334152D6bDB62aacF56f8DbCceA5210b78D`](https://scan.testnet.initia.xyz/artic-1/tx/0xd2b8e935c5fb5df88a46e032c92ad8ab00b3f6c26cb845700ddce7969d78cfe6)
+- **Demo video**: [https://youtu.be/_mTBOjFe1WI](https://youtu.be/_mTBOjFe1WI)
+- **Submission manifest**: [`.initia/submission.json`](.initia/submission.json)
 
 ### Project Overview
 
-Artic is an LLM-orchestrated multi-agent paper-trading platform built on its
-own Initia EVM rollup. Each user gets isolated agent containers (one per
-symbol) where Gemini 2.5 Pro selects from 30+ quantitative strategies and
-supervises risk in real time. Every supervisor decision and trade close is
-written immutably to `DecisionLogger` / `TradeLogger` contracts on the
-rollup — turning the dashboard into a forensic audit log of why the AI
-acted, not just what it did.
+Artic is an LLM-orchestrated multi-agent trading platform that turns retail
+algo-trading into a verifiable, on-chain activity. Each user gets isolated
+agent containers (one per symbol) running on per-user Morph VMs, where
+Gemini 2.5 Pro picks from 30+ quantitative strategies and supervises risk
+every 60 seconds. Every supervisor decision and trade open/close is hashed
+and emitted on-chain to the user's own Initia EVM rollup — making the
+dashboard a forensic audit log of *why* the AI acted, not just *what* it
+did. This pattern is economically infeasible on any chain charging more
+than $0.001/tx; Initia's 100ms blocks and effectively-zero gas are what
+make per-tick decision logging viable.
 
 ### Implementation Detail
 
-- **The Custom Implementation**: Hub orchestrates per-user Morph VMs that
-  spawn Docker agent containers; each agent runs its own FastAPI trading
-  loop with a 30+-strategy library and an LLM supervisor that re-plans every
-  60s. Decisions and trades are hashed and emitted on-chain via web3.py from
-  inside the agent container. Live log + decision streams ride a hub→VM
-  WebSocket reverse proxy so the dashboard sees reasoning in real time.
-- **The Native Feature**: **auto-signing** via InterwovenKit session keys.
-  Agents bond a session-key grantee to the user's wallet and submit on-chain
-  log txs with no per-tx popup. This is the autonomy primitive — without it,
-  every supervisor tick would block on a wallet prompt. Identity is also
-  surfaced via **Initia Usernames** (`.init`) wherever the wallet is shown.
+- **The Custom Implementation**: A central FastAPI **hub** orchestrates
+  per-user Morph VMs and exposes a wake-proxy at `/api/v1/u/*`. Each VM
+  runs a **user-server** that spawns Docker **agent containers** — one
+  per trading symbol — each with its own FastAPI loop, 30+-strategy
+  library, Gemini supervisor, and Pyth price feed. Two Solidity contracts
+  on the `artic-1` rollup (`DecisionLogger`, `TradeLogger`) capture every
+  AI decision and trade, signed by the agent via web3.py. Logs stream
+  back to the dashboard live via a hub→VM WebSocket reverse proxy.
+- **The Native Feature**: **auto-signing** via InterwovenKit session
+  keys. When a user enables it from Settings, InterwovenKit bonds a
+  session-key grantee to their wallet on `initiation-2`. Agents then sign
+  every `DecisionLogger` / `TradeLogger` tx without a popup — without
+  this, every supervisor tick would block on a wallet prompt and the
+  audit-log thesis would collapse. Auto-signing is the autonomy
+  primitive that makes the product possible. Identity is also surfaced
+  via **Initia Usernames** (`.init`) — usernames replace addresses in
+  the header, settings, and agent attribution.
 
 ### How to Run Locally
 
-1. `cp .env.dev .env` and fill in `INITIA_RPC_URL`, `INITIA_PRIVATE_KEY`,
-   `INITIA_CHAIN_ID` (your rollup chain ID from `weave init`).
-2. `docker compose -f docker-compose.dev.yml up --build` — boots hub +
-   user-server + Postgres.
-3. `cd clients/web && bun install && bun dev` — dashboard at
-   `http://localhost:3000`. Connect via InterwovenKit, click Settings →
-   Enable Auto-Sign, then create an agent.
-4. Optional — redeploy contracts to your rollup:
-   `INITIA_RPC_URL=… INITIA_PRIVATE_KEY=… INITIA_CHAIN_ID=… python contracts/deploy.py && python contracts/deploy_trade_logger.py`.
-
-Submission manifest: [`.initia/submission.json`](.initia/submission.json).
+1. **Launch your own Initia EVM rollup**: install `weave`, `initiad`,
+   `minitiad` (EVM build), then run `weave init` and pick **EVM** + chain
+   ID `artic-1`. Fund the gas station from
+   [the testnet faucet](https://app.testnet.initia.xyz/faucet).
+2. **Deploy contracts**:
+   ```bash
+   export INITIA_RPC_URL=http://localhost:8545
+   export INITIA_PRIVATE_KEY=<your funded EVM private key>
+   export INITIA_CHAIN_ID=artic-1
+   python contracts/deploy.py && python contracts/deploy_trade_logger.py
+   ```
+3. **Boot hub + user-server**: `cp .env.dev .env`, paste the rollup RPC
+   into `INITIA_RPC_URL`, then
+   `docker compose -f docker-compose.dev.yml --env-file .env.dev up -d`.
+4. **Run the dashboard**: `cd clients/web && bun install && bun dev`,
+   open `http://localhost:3000`, connect via InterwovenKit (Initia
+   testnet wallet), go to Settings → **Enable Auto-Sign**, then Agents →
+   New Agent (e.g. PEPE / DOGE / OP for high vol). Trade rows + on-chain
+   tx hashes appear in the agent detail page within a few minutes.
 
 ---
 
