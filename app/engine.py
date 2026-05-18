@@ -439,25 +439,37 @@ class TradingEngine:
         )
         log_emit("supervisor", f"[SUPERVISOR] {resp.action}: {resp.reasoning}")
 
-        # Log decision on-chain
+        # Log decision on-chain (best-effort) + always persist DB row
+        tx_hash: str | None = None
         if self._onchain._enabled:
-            u_pnl_bps = int(u_pnl_pct * 10000)  # convert to basis points
-            tx_hash = await self._onchain.log_decision(
+            u_pnl_bps = int(u_pnl_pct * 10000)
+            try:
+                tx_hash = await self._onchain.log_decision(
+                    agent_id=self._agent_id,
+                    symbol=self.symbol,
+                    action=resp.action,
+                    strategy=self.strategy_plan.strategy,
+                    confidence=75,
+                    pnl_bps=u_pnl_bps,
+                    reasoning=resp.reasoning,
+                )
+                if tx_hash:
+                    log_emit("supervisor", f"[ON-CHAIN] Decision logged: {tx_hash}")
+            except Exception as e:
+                log_emit("error", f"[ERROR] On-chain decision log failed: {e}")
+        if self._agent_id:
+            try:
+                from .llm.llm_planner import LAST_REASONING_CID
+            except Exception:
+                LAST_REASONING_CID = None
+            await hub_callback.report_onchain_decision(
                 agent_id=self._agent_id,
-                symbol=self.symbol,
+                tx_hash=tx_hash,
                 action=resp.action,
-                strategy=self.strategy_plan.strategy,
-                confidence=75,  # TODO: extract from LLM response
-                pnl_bps=u_pnl_bps,
+                strategy=self.strategy_plan.strategy if self.strategy_plan else None,
                 reasoning=resp.reasoning,
+                reasoning_cid=LAST_REASONING_CID,
             )
-            if tx_hash:
-                log_emit("supervisor", f"[ON-CHAIN] Decision logged: {tx_hash}")
-                # Push to hub for DB persistence
-                if self._agent_id:
-                    await hub_callback.report_onchain_decision(
-                        self._agent_id, tx_hash, resp.reasoning,
-                    )
 
         if resp.action == "CLOSE":
             self._execute_action(Action.CLOSE, current_price, f"supervisor: {resp.reasoning}")

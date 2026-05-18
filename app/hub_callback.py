@@ -140,6 +140,30 @@ class HubCallback:
         except Exception as e:
             logger.debug(f"[HubCallback] tx_hash patch failed: {e}")
 
+    async def push_decision(
+        self,
+        agent_id: str,
+        action: str,
+        strategy: str | None,
+        reasoning: str | None,
+        tx_hash: str | None,
+        reasoning_cid: str | None,
+    ) -> None:
+        if not self.enabled:
+            return
+        try:
+            client = await self._get_client()
+            await client.post("/decisions", json={
+                "agent_id": agent_id,
+                "action": action,
+                "strategy": strategy,
+                "reasoning": reasoning,
+                "tx_hash": tx_hash,
+                "reasoning_cid": reasoning_cid,
+            })
+        except Exception as e:
+            logger.debug(f"[HubCallback] decision push failed: {e}")
+
     async def close(self) -> None:
         if self._client and not self._client.is_closed:
             await self._client.aclose()
@@ -176,10 +200,24 @@ async def report_onchain_trade(
     await _get().patch_trade_tx_hash(agent_id, tx_hash)
 
 
-async def report_onchain_decision(agent_id: str, tx_hash: str, reasoning_text: str) -> None:
-    if not tx_hash:
-        return
-    buffer_log("supervisor", f"onchain decision tx={tx_hash}")
+async def report_onchain_decision(
+    agent_id: str,
+    tx_hash: str | None,
+    action: str,
+    strategy: str | None,
+    reasoning: str,
+    reasoning_cid: str | None = None,
+) -> None:
+    if tx_hash:
+        buffer_log("supervisor", f"onchain decision tx={tx_hash}")
+    await _get().push_decision(
+        agent_id=agent_id,
+        action=action,
+        strategy=strategy,
+        reasoning=reasoning,
+        tx_hash=tx_hash,
+        reasoning_cid=reasoning_cid,
+    )
 
 
 async def flush_logs(agent_id: str, entries: list | None = None) -> None:

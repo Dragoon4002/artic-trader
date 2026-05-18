@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useSignMessage } from "wagmi"
+import { useSignMessage, useSwitchChain, useChainId } from "wagmi"
 import {
   buildSigninMessage,
   clearJwt,
@@ -37,9 +37,15 @@ const SESSION_TTL_SECONDS = 8 * 60 * 60
 
 type Status = "idle" | "running" | "ok" | "error"
 
+const TARGET_CHAIN_ID = Number(
+  (process.env.NEXT_PUBLIC_ZERO_G_CHAIN_ID as string | undefined) || "16661",
+)
+
 export function useHubAuth() {
   const { address: walletAddress, isConnected, openConnect } = useWallet()
   const { signMessageAsync } = useSignMessage()
+  const { switchChainAsync } = useSwitchChain()
+  const currentChainId = useChainId()
   const [token, setToken] = useState<StoredJwt | null>(null)
   const [status, setStatus] = useState<Status>("idle")
   const [error, setError] = useState<string | null>(null)
@@ -67,6 +73,18 @@ export function useHubAuth() {
     setError(null)
     try {
       const address = walletAddress
+
+      // Force wallet onto 0G Mainnet before signing. Wallet may auto-add the
+      // chain if unknown; otherwise the user has to confirm the switch.
+      if (currentChainId !== TARGET_CHAIN_ID) {
+        try {
+          await switchChainAsync({ chainId: TARGET_CHAIN_ID })
+        } catch (e) {
+          throw new Error(
+            `please switch your wallet to 0G Mainnet (chain ${TARGET_CHAIN_ID}) and retry: ${(e as Error).message}`,
+          )
+        }
+      }
 
       let nonce: Awaited<ReturnType<typeof fetchNonce>>
       try {
@@ -130,7 +148,7 @@ export function useHubAuth() {
     } finally {
       inFlight.current = false
     }
-  }, [walletAddress, isConnected, signMessageAsync])
+  }, [walletAddress, isConnected, signMessageAsync, currentChainId, switchChainAsync])
 
   const signOut = useCallback(() => {
     clearJwt()

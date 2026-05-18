@@ -93,14 +93,15 @@ class OnchainLogger:
             LAST_REASONING_CID = None
 
         reasoning_payload = f"og:{LAST_REASONING_CID}" if LAST_REASONING_CID else reasoning
-        reasoning_hash = self._w3.keccak(text=reasoning_payload)
-
         tee_sig_bytes = _hex_to_bytes(LAST_TEE_SIGNATURE)
-        tee_provider = os.getenv("ZERO_G_COMPUTE_PROVIDER", "").strip()
-        if not (tee_provider and Web3.is_address(tee_provider)):
-            tee_provider = ZERO_ADDR
+        # Deployed DecisionLogger ABI is 7-arg. Mix TEE signature into the hash
+        # so attestation is bound on-chain even without a dedicated field.
+        if tee_sig_bytes:
+            reasoning_hash = self._w3.keccak(
+                reasoning_payload.encode() + b"|tee:" + tee_sig_bytes
+            )
         else:
-            tee_provider = Web3.to_checksum_address(tee_provider)
+            reasoning_hash = self._w3.keccak(text=reasoning_payload)
 
         def _send():
             nonce = self._w3.eth.get_transaction_count(self._account.address)
@@ -112,8 +113,6 @@ class OnchainLogger:
                 min(confidence, 100),
                 pnl_bps,
                 reasoning_hash,
-                tee_provider,
-                tee_sig_bytes,
             ).build_transaction(
                 {
                     "from": self._account.address,

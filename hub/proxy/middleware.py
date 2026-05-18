@@ -44,6 +44,25 @@ class WakeProxyMiddleware(BaseHTTPMiddleware):
         if not user_id:
             return _error(401, "UNAUTHENTICATED", "missing or invalid credentials")
 
+        # Gate: agent /start and /start-all require funded user wallet (>= 0.2 OG).
+        # Lazy-generates wallet on first call. Other paths bypass.
+        if _is_start_path(request.url.path):
+            from ..wallet import service as wallet_svc
+            async with db_base.async_session() as db:
+                row = (
+                    await db.execute(select(User).where(User.id == user_id))
+                ).scalar_one_or_none()
+                if row is None:
+                    return _error(401, "UNAUTHENTICATED", "user missing")
+                await wallet_svc.ensure_wallet(db, row)
+                bal = wallet_svc.get_balance_og(row.chain_address or "")
+                if not wallet_svc.can_start(bal):
+                    return _error(
+                        402,
+                        "WALLET_UNFUNDED",
+                        f"wallet {row.chain_address} below {wallet_svc.MIN_START_OG} OG; current {bal}",
+                    )
+
         state = self.vm_service.registry.get(user_id)
         if state is None:
             return _error(404, "VM_NOT_PROVISIONED", "no VM for user")
@@ -68,6 +87,13 @@ class WakeProxyMiddleware(BaseHTTPMiddleware):
         if 200 <= response.status_code < 400:
             await self.vm_service.touch(user_id)
         return response
+
+
+def _is_start_path(path: str) -> bool:
+    if not path.startswith(_PREFIX):
+        return False
+    sub = path[len(_PREFIX):]
+    return sub.endswith("/start") or sub == "/agents/start-all"
 
 
 async def _resolve_user_id(request: Request) -> str | None:

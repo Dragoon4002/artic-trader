@@ -256,8 +256,29 @@ class VMService:
         handle = await self.provider.start(snapshot_id)
         await self._persist_vm_id(user_id, handle.vm_id)
         await self.provider.configure_wake_on_http(handle.vm_id)
+        # Inject this user's generated 0G wallet privkey so all on-chain
+        # logging from agents on this VM signs from the user's address.
+        extra_env: dict[str, str] = {}
+        async with db_base.async_session() as db:
+            from ..db.models.user import User as _User
+            from ..wallet import service as wallet_svc
+            row = (
+                await db.execute(select(_User).where(_User.id == user_id))
+            ).scalar_one_or_none()
+            if row is not None:
+                row = await wallet_svc.ensure_wallet(db, row)
+                if row.chain_privkey:
+                    extra_env["ZERO_G_PRIVATE_KEY"] = row.chain_privkey
+        # Forward shared chain config from hub env so user-server matches mainnet.
+        for k in ("ZERO_G_RPC_URL", "ZERO_G_CHAIN_ID", "ZERO_G_EXPLORER_BASE",
+                  "ZERO_G_COMPUTE_SECRET", "ZERO_G_COMPUTE_PROVIDER",
+                  "ZERO_G_COMPUTE_SERVING_BROKER", "ZERO_G_STORAGE_INDEXER_URL"):
+            import os as _os
+            v = _os.getenv(k)
+            if v:
+                extra_env[k] = v
         endpoint = await self.provider.launch_user_server(
-            handle.vm_id, user_id, user_token
+            handle.vm_id, user_id, user_token, extra_env=extra_env
         )
         await self._persist_endpoint(user_id, endpoint)
         return VMHandle(

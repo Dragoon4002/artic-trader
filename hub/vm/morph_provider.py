@@ -64,7 +64,7 @@ class MorphProvider:
             logger.warning("wake-on config failed: %s %s", r.status_code, r.text)
 
     async def launch_user_server(
-        self, vm_id: str, user_id: str, user_token: str
+        self, vm_id: str, user_id: str, user_token: str, extra_env: dict | None = None
     ) -> str:
         """Run the user-server container then expose port 80. See morph-vm.md §4.4.
 
@@ -99,6 +99,12 @@ class MorphProvider:
             "docker network inspect artic-dev >/dev/null 2>&1 || docker network create artic-dev",
             timeout=30.0,
         )
+        extra_flags = ""
+        if extra_env:
+            import shlex as _shlex
+            extra_flags = " ".join(
+                f"-e {k}={_shlex.quote(str(v))}" for k, v in extra_env.items() if v is not None
+            ) + " "
         run_cmd = (
             "docker rm -f user-server 2>/dev/null; "
             "docker run -d --rm --name user-server "
@@ -113,6 +119,7 @@ class MorphProvider:
             f"-e AGENT_IMAGE=artic-agent:{self.image_tag} "
             "-e AGENT_NETWORK=artic-dev "
             "-e USER_SERVER_INTERNAL_URL=http://host.docker.internal:8000 "
+            f"{extra_flags}"
             f"artic-user-server:{self.image_tag}"
         )
         await self._exec(vm_id, run_cmd, timeout=120.0)

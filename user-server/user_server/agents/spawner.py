@@ -5,10 +5,48 @@ Kept thin so tests can inject a fake docker client via `get_client()`.
 """
 from __future__ import annotations
 
+import os
 import uuid
+from pathlib import Path
 from typing import Protocol
 
 from ..config import settings
+
+
+def _load_env_into_os() -> None:
+    """Populate os.environ from project .env files so build_env() sees ZERO_G_*
+    and LLM_PROVIDER. Pydantic-Settings loads .env into the Settings model but
+    not into os.environ, which build_env relies on for chain/compute config."""
+    here = Path(__file__).resolve()
+    candidates = []
+    # .env.local takes precedence over .env (Next.js convention). Earlier files
+    # in this list win because the loader skips keys already set.
+    for base in (here.parents[2], here.parents[3], Path.cwd()):
+        candidates.append(base / ".env.local")
+        candidates.append(base / ".env")
+    seen: set[str] = set()
+    for env_file in candidates:
+        key = str(env_file)
+        if key in seen or not env_file.is_file():
+            continue
+        seen.add(key)
+        try:
+            for raw in env_file.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                # Skip placeholder values like "<provider_addr>" — they're sentinels, not config.
+                if not k or k in os.environ or not v or (v.startswith("<") and v.endswith(">")):
+                    continue
+                os.environ[k] = v
+        except Exception:
+            continue
+
+
+_load_env_into_os()
 
 
 class DockerContainer(Protocol):  # structural subset of docker.models.containers.Container
@@ -93,7 +131,6 @@ def build_env(
     0G Compute TeeML proxy.
     """
     import json
-    import os
 
     chain_env: dict[str, str] = {}
     for key in (
@@ -117,8 +154,11 @@ def build_env(
         "HUB_URL": user_server_url,  # hub_callback reads HUB_URL for push endpoints
         "INTERNAL_SECRET": internal_secret,
         "STRATEGY_POOL": json.dumps(agent.strategy_pool or []),
-        "LLM_PROVIDER": agent.llm_provider,
-        "LLM_MODEL": agent.llm_model,
+        # Env LLM_PROVIDER on user-server overrides per-agent stored value —
+        # lets a single deployment flip the whole fleet to 0g_compute without
+        # touching agent rows. Falls back to agent's stored choice otherwise.
+        "LLM_PROVIDER": os.getenv("LLM_PROVIDER") or agent.llm_provider,
+        "LLM_MODEL": os.getenv("LLM_MODEL") or agent.llm_model,
         "RISK_PARAMS": json.dumps(agent.risk_params or {}),
         **({"GEMINI_API_KEY": llm_api_key} if llm_api_key else {}),
         **({"TWELVE_DATA_API_KEY": twelve_data_api_key} if twelve_data_api_key else {}),

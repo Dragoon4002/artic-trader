@@ -29,6 +29,7 @@ class TradeRow(BaseModel):
     opened_at: datetime
     closed_at: datetime | None
     tx_hash: str | None = None
+    reasoning_cid: str | None = None
 
 
 class TradesResponse(BaseModel):
@@ -64,6 +65,7 @@ async def get_trades(
                 opened_at=r.open_at,
                 closed_at=r.close_at,
                 tx_hash=r.tx_hash,
+                reasoning_cid=r.reasoning_cid,
             )
             for r in rows
         ]

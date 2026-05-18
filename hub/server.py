@@ -36,6 +36,7 @@ from .proxy.middleware import WakeProxyMiddleware
 from .proxy.ws import router as proxy_ws_router
 from .secrets import push as secrets_push
 from .secrets.service import router as secrets_router
+from .wallet.router import router as wallet_router
 from .utils import mtls
 from .utils.errors import install_error_handlers
 from .vm import get_service
@@ -121,6 +122,7 @@ app.include_router(internal_router)
 app.include_router(images_router)
 app.include_router(market_router)
 app.include_router(secrets_router)
+app.include_router(wallet_router)
 app.include_router(strategy_stats_router)
 app.include_router(strategies_router)
 app.include_router(marketplace_router)

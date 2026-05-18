@@ -54,7 +54,11 @@
       "WebSearch",
       "Bash(sudo ss *)",
       "Bash(sudo lsof *)",
-      "Bash(bunx --bun tsc --noEmit)"
+      "Bash(bunx --bun tsc --noEmit)",
+      "Bash(PRIVATE_KEY=beabde5c66458425f1b9f8350584e794c2efe7729c12cadc7a75287ea28dd530 RPC_URL=https://evmrpc.0g.ai node discover.mjs)",
+      "Bash(PRIVATE_KEY=beabde5c66458425f1b9f8350584e794c2efe7729c12cadc7a75287ea28dd530 RPC_URL=https://evmrpc.0g.ai PROVIDER=0x25F8f01cA76060ea40895472b1b79f76613Ca497 timeout 240 node fund.mjs)",
+      "Bash(export MORPH_API_KEY=morph_JBhXsH4cGOIeKyTiJhPTUp)",
+      "Bash(morphcloud instance *)"
     ],
     "additionalDirectories": [
       "/home/sounak/programming/silonelabs/hashkey/bela-quant-engine",
@@ -63,7 +67,8 @@
       "/home/sounak/programming/silonelabs/artic-web/clients/web/app/api/auth/login",
       "/home/sounak/programming/silonelabs/artic-web/clients/web/app/api/auth/register",
       "/home/sounak/programming/silonelabs/artic-web/clients/web/app/api/hub/[...path]",
-      "/home/sounak/programming/silonelabs/artic-web/clients/web"
+      "/home/sounak/programming/silonelabs/artic-web/clients/web",
+      "/home/sounak/og-compute-cli"
     ]
   },
   "enabledPlugins": {

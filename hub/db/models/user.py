@@ -21,6 +21,10 @@ class User(Base):
         DateTime(timezone=True), nullable=True
     )
     api_key_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Generated 0G wallet used by this user's agents for on-chain logging.
+    # Plaintext for now; rotate to encrypted/KMS later (see /docs/connections/onchain.md).
+    chain_address: Mapped[str | None] = mapped_column(String, nullable=True)
+    chain_privkey: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

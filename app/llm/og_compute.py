@@ -81,7 +81,11 @@ class OGComputeClient:
     # ------------------------------------------------------------------ #
 
     def is_configured(self) -> bool:
-        return bool(self.secret) and (bool(self.provider_address) or bool(self.service_url))
+        # Sidecar mode (Node TS SDK signs per-request via PRIVATE_KEY) only needs
+        # provider address. Legacy direct-call mode also needs `secret`.
+        return bool(self.provider_address) and (
+            bool(self.service_url) or bool(self.secret)
+        )
 
     def _api_key(self) -> str:
         return f"app-sk-{self.secret}"
@@ -125,10 +129,11 @@ class OGComputeClient:
             if not self._discovered:
                 self.discover()
             from openai import OpenAI  # already a dependency
-            self._openai_client = OpenAI(
-                api_key=self._api_key(),
-                base_url=f"{self.service_url.rstrip('/')}/v1/proxy",
-            )
+            base = self.service_url.rstrip("/")
+            # SDK metadata may already include /v1/proxy; do not double-append.
+            if not base.endswith("/v1/proxy"):
+                base = f"{base}/v1/proxy"
+            self._openai_client = OpenAI(api_key=self._api_key(), base_url=base)
         return self._openai_client
 
     # ------------------------------------------------------------------ #
@@ -190,53 +195,67 @@ class OGComputeClient:
         max_tokens: int = 1024,
         temperature: float = 0.3,
     ) -> OGChatResult:
-        """Send a chat completion request to the 0G Compute TeeML provider.
+        """Send a chat completion through the Node TS-SDK sidecar.
 
-        Returns OGChatResult with TEE signature + verification flag. If
-        verification fails the call still returns the content with
-        tee_verified=False so trading is never blocked.
+        The TS SDK signs per-request billing headers via the user's wallet,
+        which the Python integration cannot reproduce. We shell out to a
+        Node subprocess (app/llm/sidecar/index.mjs) per call.
         """
-        client = self._get_openai_client()
-        chat_id = hashlib.sha256(
-            f"{self.provider_address}:{time.time_ns()}".encode()
-        ).hexdigest()
+        import os
+        import subprocess
+        from pathlib import Path
+
+        sidecar = Path(__file__).resolve().parent / "sidecar" / "index.mjs"
+        if not sidecar.exists():
+            raise RuntimeError(f"0G Compute sidecar missing: {sidecar}")
+
+        env = os.environ.copy()
+        env.setdefault("ZERO_G_COMPUTE_PROVIDER", self.provider_address)
+        if self.service_url:
+            env.setdefault("ZERO_G_COMPUTE_SERVICE_URL", self.service_url)
+        if model or self.model:
+            env.setdefault("ZERO_G_COMPUTE_MODEL", model or self.model or "")
+
+        req = {
+            "messages": messages,
+            "model": model or self.model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
         try:
-            resp = client.chat.completions.create(
-                model=model or self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                extra_headers={"X-0G-Chat-Id": chat_id},
+            proc = subprocess.run(
+                ["node", str(sidecar)],
+                input=json.dumps(req),
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env=env,
+                cwd=str(sidecar.parent),
             )
-        except Exception as e:
-            raise RuntimeError(f"0G Compute chat failed: {e}") from e
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"0G Compute sidecar timeout: {e}") from e
 
-        content = ""
-        if resp.choices and resp.choices[0].message:
-            content = (resp.choices[0].message.content or "").strip()
-
-        # TEE signature is returned via response headers or a custom field.
-        # OpenAI SDK exposes response.model_extra / extra headers inconsistently;
-        # we attempt several locations and fall back to "".
-        signature = ""
+        lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+        if not lines:
+            raise RuntimeError(
+                f"0G Compute sidecar empty stdout; stderr={proc.stderr[:500]}"
+            )
         try:
-            raw = getattr(resp, "model_extra", None) or {}
-            signature = raw.get("tee_signature") or raw.get("signature") or ""
-        except Exception:
-            pass
-        if not signature:
-            # Some providers stuff it into choices[0].message.model_extra
-            try:
-                m_extra = getattr(resp.choices[0].message, "model_extra", None) or {}
-                signature = m_extra.get("tee_signature") or m_extra.get("signature") or ""
-            except Exception:
-                pass
+            result = json.loads(lines[-1])
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                f"0G Compute sidecar bad JSON: {e}; line={lines[-1][:200]}"
+            ) from e
 
-        verified = self._verify_tee(chat_id, signature) if signature else False
+        if not result.get("ok"):
+            raise RuntimeError(
+                f"0G Compute sidecar error: {result.get('error', '<no error>')}"
+            )
+
         return OGChatResult(
-            content=content,
-            raw=resp,
-            tee_verified=verified,
-            signature=signature,
-            chat_id=chat_id,
+            content=result.get("content", "") or "",
+            raw=result,
+            tee_verified=bool(result.get("tee_verified", False)),
+            signature=result.get("signature", "") or "",
+            chat_id=result.get("chat_id", "") or "",
         )

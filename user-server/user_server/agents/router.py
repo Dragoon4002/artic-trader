@@ -117,6 +117,8 @@ async def stop_agent(agent_id: uuid.UUID, db: AsyncSession = Depends(get_session
 async def start_all(db: AsyncSession = Depends(get_session)) -> list[AgentOut]:
     agents = await service.start_all(db)
     await db.commit()
+    for a in agents:
+        await db.refresh(a)
     return [AgentOut.from_row(a) for a in agents]
 
 
@@ -124,4 +126,6 @@ async def start_all(db: AsyncSession = Depends(get_session)) -> list[AgentOut]:
 async def stop_all(db: AsyncSession = Depends(get_session)) -> list[AgentOut]:
     agents = await service.stop_all(db)
     await db.commit()
+    for a in agents:
+        await db.refresh(a)
     return [AgentOut.from_row(a) for a in agents]

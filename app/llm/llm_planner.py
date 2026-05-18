@@ -170,7 +170,11 @@ class LLMPlanner:
                 print(f"[WARN] Failed to initialize MarketData: {e}")
 
     def _has_og_compute(self) -> bool:
-        return bool(self.zero_g_compute_secret) and bool(self.zero_g_compute_provider)
+        # Sidecar handles per-request signing via ZERO_G_PRIVATE_KEY; provider
+        # address alone is enough. Legacy direct-call mode also accepts secret.
+        return bool(self.zero_g_compute_provider) and (
+            bool(self.zero_g_compute_secret) or bool(os.getenv("ZERO_G_PRIVATE_KEY"))
+        )
 
     def _get_provider(self, override: Optional[str] = None) -> Optional[Provider]:
         override = (override or "").strip().lower() or None

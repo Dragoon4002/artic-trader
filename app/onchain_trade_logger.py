@@ -94,6 +94,14 @@ class OnchainTradeLogger:
         else:
             tee_provider = Web3.to_checksum_address(tee_provider)
 
+        # Deployed TradeLogger ABI is 7-arg (no TEE fields). Fold TEE into detail_hash
+        # by mixing the signature into the keccak input instead of separate args.
+        if tee_sig_bytes:
+            detail_hash = self._w3.keccak(
+                (b"og:" + (og_cid or "").encode() if og_cid else detail_json.encode())
+                + b"|tee:" + tee_sig_bytes
+            )
+
         def _send():
             nonce = self._w3.eth.get_transaction_count(self._account.address)
             tx = self._contract.functions.logTrade(
@@ -104,8 +112,6 @@ class OnchainTradeLogger:
                 exit_scaled,
                 pnl_bps,
                 detail_hash,
-                tee_provider,
-                tee_sig_bytes,
             ).build_transaction({
                 "from": self._account.address,
                 "nonce": nonce,

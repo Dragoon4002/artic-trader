@@ -18,7 +18,7 @@ from shared.models.log import LogEntry as LogEntryIn
 from shared.models.log import LogLevel
 
 from ..db.base import get_session
-from ..db.models import Agent, LogEntry, Trade
+from ..db.models import Agent, Decision, LogEntry, Trade
 from ..security import internal_guard
 from . import registry
 
@@ -135,6 +135,32 @@ async def patch_trade_tx_hash(
     trade.tx_hash = body.tx_hash
     await db.commit()
     return {"id": str(trade_id), "tx_hash": body.tx_hash}
+
+
+class DecisionPush(BaseModel):
+    agent_id: uuid.UUID
+    action: str
+    strategy: str | None = None
+    reasoning: str | None = None
+    tx_hash: str | None = None
+    reasoning_cid: str | None = None
+
+
+@router.post("/decisions", status_code=201)
+async def push_decision(
+    body: DecisionPush, db: AsyncSession = Depends(get_session)
+) -> dict:
+    row = Decision(
+        agent_id=body.agent_id,
+        action=body.action,
+        strategy=body.strategy,
+        reasoning=body.reasoning,
+        tx_hash=body.tx_hash,
+        reasoning_cid=body.reasoning_cid,
+    )
+    db.add(row)
+    await db.commit()
+    return {"id": str(row.id)}
 
 
 @router.post("/logs", status_code=201)

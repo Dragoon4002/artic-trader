@@ -19,7 +19,13 @@ export const metadata: Metadata = {
   description:
     "Deploy AI trading agents on any market at any scale. Artic is the orchestration hub for AI-powered trading with 30+ quant strategies.",
   icons: {
-    icon: "/artic-logo.png",
+    icon: [
+      { url: "/artic-logo.png", type: "image/png" },
+      { url: "/artic-logo.png", sizes: "32x32", type: "image/png" },
+      { url: "/artic-logo.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/artic-logo.png", sizes: "180x180", type: "image/png" }],
+    shortcut: "/artic-logo.png",
   },
   keywords: [
     "AI trading",
