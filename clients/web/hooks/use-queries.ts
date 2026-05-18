@@ -13,6 +13,8 @@ export const qk = {
   agents: () => ["agents"] as const,
   agent: (id: string) => ["agents", id] as const,
   trades: (agentId?: string) => ["trades", agentId ?? "all"] as const,
+  decisions: (agentId: string) => ["decisions", agentId] as const,
+  chainWallet: () => ["chain-wallet"] as const,
   logs: (agentId: string) => ["logs", agentId] as const,
   strategies: () => ["strategies"] as const,
   strategy: (id: string) => ["strategies", id] as const,
@@ -48,6 +50,31 @@ export const useTrades = (agentId?: string) =>
     queryFn: () => api.listTrades(agentId),
     staleTime: SHORT,
   })
+
+export const useDecisions = (agentId?: string) =>
+  useQuery({
+    queryKey: qk.decisions(agentId ?? ""),
+    queryFn: () => api.listDecisions(agentId ?? ""),
+    staleTime: SHORT,
+    enabled: !!agentId,
+  })
+
+export const useChainWallet = () =>
+  useQuery({
+    queryKey: qk.chainWallet(),
+    queryFn: api.getWallet,
+    staleTime: SHORT,
+    refetchInterval: 15_000,
+  })
+
+export const useWithdrawChainWallet = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ to, amount }: { to: string; amount: string }) =>
+      api.withdrawWallet(to, amount),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.chainWallet() }),
+  })
+}
 
 export const useLogs = (agentId: string) =>
   useQuery({

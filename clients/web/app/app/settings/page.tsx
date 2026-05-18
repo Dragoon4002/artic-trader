@@ -1,18 +1,15 @@
 "use client"
 
-import { Copy, KeyRound, LogOut, Trash2 } from "lucide-react"
+import { Copy, LogOut } from "lucide-react"
 import { useState } from "react"
 import { PageHeader } from "@/components/dashboard/empty-state"
-import { Skeleton } from "@/components/dashboard/skeleton"
+import { ChainWalletCard } from "@/components/wallet/chain-wallet-card"
 import { useWallet } from "@/hooks/use-wallet"
-import { useApiKeyHint, useSessions } from "@/hooks/use-queries"
 import { displayName, shortenAddr } from "@/lib/identity"
 import { CHAIN_ID, EVM_CHAIN_ID } from "@/lib/chain"
 
 export default function SettingsPage() {
   const { address, username, disconnect } = useWallet()
-  const { data: sessions = [], isLoading: sessionsLoading } = useSessions()
-  const { data: apiKeyHint, isLoading: apiKeyLoading } = useApiKeyHint()
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     if (!address) return
@@ -23,7 +20,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Settings" subtitle="Your identity, sessions, and API keys." />
+      <PageHeader title="Settings" subtitle="Your identity and wallet." />
 
       <Section title="Identity">
         <div className="flex items-center justify-between">
@@ -46,67 +43,7 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      <Section title="Hub sessions">
-        {sessionsLoading ? (
-          <Skeleton className="mt-3" height={120} />
-        ) : (
-        <ul className="mt-3 divide-y divide-white/5 rounded-md border border-white/10 bg-white/[0.02]">
-          {sessions.map((s, i) => (
-            <li key={s.session_id} className="flex items-start justify-between gap-3 p-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="truncate font-mono text-xs font-semibold text-foreground">
-                    {s.session_id}
-                  </p>
-                  {i === 0 && (
-                    <span className="rounded bg-[var(--color-teal)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-teal)]">
-                      this tab
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-[11px] text-foreground/50">{s.ua_hint}</p>
-                <p className="mt-0.5 font-mono text-[11px] text-foreground/40">
-                  scope={s.scope} · expires {s.expires_at.slice(0, 16).replace("T", " ")}
-                </p>
-              </div>
-              <button
-                disabled
-                title="Hub auth wiring pending"
-                className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-[var(--color-red)]/30 bg-white/[0.02] px-2.5 py-1.5 text-xs text-[var(--color-red-light)] opacity-60"
-              >
-                <Trash2 size={12} />
-                Revoke
-              </button>
-            </li>
-          ))}
-        </ul>
-        )}
-      </Section>
-
-      <Section title="API keys">
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-foreground/60">
-              API keys let non-browser clients (scripts, CI) reach the hub. One key per user.
-            </p>
-            <p className="mt-1.5 font-mono text-xs text-foreground/50">
-              current:{" "}
-              {apiKeyLoading ? (
-                <span className="text-foreground/30">loading…</span>
-              ) : (
-                <span className="rounded bg-white/[0.04] px-2 py-0.5">{apiKeyHint ?? "none"}</span>
-              )}
-            </p>
-          </div>
-          <button
-            disabled
-            title="Hub auth wiring pending"
-            className="inline-flex shrink-0 cursor-not-allowed items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-foreground/40"
-          >
-            <KeyRound size={12} /> Rotate
-          </button>
-        </div>
-      </Section>
+      <ChainWalletCard />
 
       <Section title="Session">
         <div className="flex items-center justify-between">

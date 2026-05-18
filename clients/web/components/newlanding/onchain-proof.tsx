@@ -88,7 +88,7 @@ export function OnchainProof() {
           <div className="flex items-center gap-3">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-accent animate-pulse shrink-0" />
             <span className="font-mono text-[11px] text-foreground/35 tabular-nums">
-              block #{entries[0].block.toLocaleString()} · 0G Galileo (chainId 16602)
+              block #{entries[0].block.toLocaleString()} · 0G Mainnet (chainId 16661)
             </span>
           </div>
         </div>

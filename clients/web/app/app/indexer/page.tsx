@@ -18,6 +18,8 @@ const KIND_TONE: Record<string, string> = {
     "text-[var(--color-blue-light)] bg-[var(--color-blue-accent)]/12",
 }
 
+const SHOW_INDEXER = false
+
 export default function IndexerPage() {
   const [tab, setTab] = useState<Tab>("mine")
   const [kind, setKind] = useState<"" | "trades" | "supervise">("")
@@ -37,6 +39,16 @@ export default function IndexerPage() {
         subtitle="On-chain tx mirror from every user-server. Read-only."
       />
 
+      {!SHOW_INDEXER && (
+        <section className="surface flex flex-col items-center justify-center gap-3 p-16 text-center">
+          <span className="rounded-full bg-[var(--color-accent-warm)]/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-accent-warm)]">
+            Coming soon
+          </span>
+          <p className="text-sm text-foreground/55">Indexer view ships next release.</p>
+        </section>
+      )}
+
+      {SHOW_INDEXER && (<>
       <PendingHub what="Rows stream from hub /indexer/tx; filters compose server-side." />
 
       <div className="flex items-center gap-2 text-xs text-foreground/55">
@@ -182,6 +194,7 @@ export default function IndexerPage() {
           </table>
         </div>
       </section>
+      </>)}
     </div>
   )
 }

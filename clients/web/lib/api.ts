@@ -26,6 +26,7 @@ import type {
   IndexerFilter,
   IndexerRow,
   LedgerRow,
+  Decision,
   LogEntry,
   MarketplaceItem,
   MarketplaceSort,
@@ -185,6 +186,8 @@ interface BackendTradeRow {
   close_reason: string | null
   opened_at: string
   closed_at: string | null
+  tx_hash: string | null
+  reasoning_cid: string | null
 }
 
 const INDEXER_EPOCH = "1970-01-01T00:00:00Z"
@@ -203,6 +206,8 @@ function mapTradeRow(r: BackendTradeRow): Trade {
     close_reason: (r.close_reason as Trade["close_reason"]) ?? null,
     opened_at: r.opened_at,
     closed_at: r.closed_at,
+    tx_hash: r.tx_hash,
+    reasoning_cid: r.reasoning_cid,
   }
 }
 
@@ -231,6 +236,63 @@ export async function listTrades(agentId?: string): Promise<Trade[]> {
       }),
     )
     return results.flat()
+  } catch {
+    return []
+  }
+}
+
+// ── Wallet (WIRED — hub /wallet, per-user 0G wallet for on-chain gas) ─────
+
+export interface WalletInfo {
+  address: string | null
+  balance_og: string
+  threshold_og: string
+  can_start: boolean
+  burn_rate_og_per_day: string
+  runout_at: string | null
+  cost_per_tx_og: string
+}
+
+export async function getWallet(): Promise<WalletInfo> {
+  return signedFetch<WalletInfo>("/wallet")
+}
+
+export async function withdrawWallet(to_address: string, amount_og: string): Promise<{ tx_hash: string }> {
+  return signedFetch<{ tx_hash: string }>("/wallet/withdraw", {
+    method: "POST",
+    body: { to_address, amount_og },
+  })
+}
+
+// ── Decisions (WIRED via /hub/decisions/{agent_id}) ───────────────────────
+
+interface BackendDecisionRow {
+  id: string
+  agent_id: string
+  action: string
+  strategy: string | null
+  reasoning: string | null
+  tx_hash: string | null
+  reasoning_cid: string | null
+  created_at: string
+}
+
+export async function listDecisions(agentId: string, limit = 50): Promise<Decision[]> {
+  if (!agentId) return []
+  try {
+    const body = await signedFetch<{ rows: BackendDecisionRow[] }>(
+      `/api/v1/u/hub/decisions/${agentId}?limit=${limit}`,
+    )
+    return body.rows.map((r) => ({
+      id: r.id,
+      agent_id: r.agent_id,
+      action: r.action,
+      strategy: r.strategy,
+      reasoning: r.reasoning,
+      tx_hash: r.tx_hash,
+      reasoning_cid: r.reasoning_cid,
+      created_at: r.created_at,
+    }))
   } catch {
     return []
   }

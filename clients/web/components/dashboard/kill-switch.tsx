@@ -2,12 +2,8 @@
 
 import { useState } from "react"
 import { Play, Square, AlertTriangle } from "lucide-react"
+import { useStartAllAgents, useStopAllAgents } from "@/hooks/use-queries"
 
-/**
- * Group toolbar for /app/agents. Start-all + Stop-all with an explicit
- * confirm step. Wiring points to signed POST /u/agents/{start,stop}-all once
- * hub auth lands — currently the buttons are disabled with hover hints.
- */
 export function KillSwitch({
   aliveCount,
   haltedCount,
@@ -18,19 +14,44 @@ export function KillSwitch({
   totalCount: number
 }) {
   const [confirming, setConfirming] = useState<"start" | "stop" | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const startAllMut = useStartAllAgents()
+  const stopAllMut = useStopAllAgents()
 
   if (totalCount === 0) return null
 
   const canStart = aliveCount < totalCount - haltedCount
   const canStop = aliveCount > 0
 
+  const onConfirmStart = async () => {
+    setError(null)
+    try {
+      await startAllMut.mutateAsync()
+      setConfirming(null)
+    } catch (e) {
+      setError(String((e as Error)?.message ?? e))
+    }
+  }
+
+  const onConfirmStop = async () => {
+    setError(null)
+    try {
+      await stopAllMut.mutateAsync()
+      setConfirming(null)
+    } catch (e) {
+      setError(String((e as Error)?.message ?? e))
+    }
+  }
+
   if (confirming === "stop") {
     return (
       <ConfirmBar
         tone="danger"
         message={`Stop all ${aliveCount} alive agent${aliveCount === 1 ? "" : "s"}?`}
-        onConfirm={() => setConfirming(null)}
-        onCancel={() => setConfirming(null)}
+        busy={stopAllMut.isPending}
+        error={error}
+        onConfirm={onConfirmStop}
+        onCancel={() => { setError(null); setConfirming(null) }}
       />
     )
   }
@@ -39,8 +60,10 @@ export function KillSwitch({
       <ConfirmBar
         tone="warn"
         message="Start every stopped agent?"
-        onConfirm={() => setConfirming(null)}
-        onCancel={() => setConfirming(null)}
+        busy={startAllMut.isPending}
+        error={error}
+        onConfirm={onConfirmStart}
+        onCancel={() => { setError(null); setConfirming(null) }}
       />
     )
   }
@@ -49,7 +72,7 @@ export function KillSwitch({
     <div className="inline-flex items-center gap-2">
       <button
         disabled={!canStart}
-        title={!canStart ? "Nothing to start" : "Hub auth wiring pending"}
+        title={!canStart ? "Nothing to start" : "Start every stopped agent"}
         onClick={() => setConfirming("start")}
         className="focus-ring inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] px-5 py-3 text-sm font-semibold text-foreground/80 transition hover:bg-white/[0.08] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
       >
@@ -70,11 +93,15 @@ export function KillSwitch({
 function ConfirmBar({
   tone,
   message,
+  busy,
+  error,
   onConfirm,
   onCancel,
 }: {
   tone: "danger" | "warn"
   message: string
+  busy: boolean
+  error: string | null
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -83,25 +110,28 @@ function ConfirmBar({
       ? "bg-[var(--color-red)]/12 text-[var(--color-red-light)]"
       : "bg-[var(--color-amber)]/12 text-[var(--color-amber)]"
   return (
-    <div
-      className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs ${accent}`}
-    >
-      <AlertTriangle size={12} />
-      <span className="font-semibold">{message}</span>
-      <button
-        onClick={onCancel}
-        className="focus-ring rounded bg-white/[0.06] px-2 py-0.5 text-[11px] text-foreground/80 transition hover:bg-white/[0.1] hover:text-foreground"
-      >
-        Cancel
-      </button>
-      <button
-        disabled
-        title="Hub auth wiring pending"
-        onClick={onConfirm}
-        className="btn-disabled rounded bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-foreground/70"
-      >
-        Confirm
-      </button>
+    <div className="inline-flex flex-col gap-1">
+      <div className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs ${accent}`}>
+        <AlertTriangle size={12} />
+        <span className="font-semibold">{message}</span>
+        <button
+          onClick={onCancel}
+          disabled={busy}
+          className="focus-ring rounded bg-white/[0.06] px-2 py-0.5 text-[11px] text-foreground/80 transition hover:bg-white/[0.1] hover:text-foreground disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={busy}
+          className="focus-ring rounded bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-foreground/90 transition hover:bg-white/25 disabled:opacity-50"
+        >
+          {busy ? "Working…" : "Confirm"}
+        </button>
+      </div>
+      {error && (
+        <p className="text-[10px] text-[var(--color-red-light)]">Error: {error}</p>
+      )}
     </div>
   )
 }

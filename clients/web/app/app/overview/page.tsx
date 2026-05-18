@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Coins, Target, TrendingUp, Trophy, BookOpen } from "lucide-react"
-import { useAgents, useStrategies, useCredits, useTrades } from "@/hooks/use-queries"
+import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Wallet, Copy, Check, Target, TrendingUp, Trophy, BookOpen } from "lucide-react"
+import { useAgents, useStrategies, useChainWallet, useTrades } from "@/hooks/use-queries"
 import { PageHeader } from "@/components/dashboard/empty-state"
 import { Skeleton } from "@/components/dashboard/skeleton"
 import { PnlAreaChart } from "@/components/dashboard/overview/pnl-area-chart"
@@ -60,7 +60,7 @@ export default function OverviewPage() {
   const { data: agents = [],     isLoading: agentsLoading }     = useAgents()
   const { data: trades = [],     isLoading: tradesLoading }     = useTrades()
   const { data: strategies,      isLoading: strategiesLoading } = useStrategies()
-  const { data: credits,         isLoading: creditsLoading }    = useCredits()
+  const { data: wallet,          isLoading: walletLoading }     = useChainWallet()
 
   const installed = strategies?.installed ?? []
   const [now] = useState(() => Date.now())
@@ -166,12 +166,8 @@ export default function OverviewPage() {
           valueTone={aliveCount > 0 ? "text-[var(--color-teal)]" : "text-foreground/55"}
           icon={<Activity size={14} />}
         />
-        <StatCard
-          label="Credits"
-          value={creditsLoading ? null : credits ? `${credits.balance_ah.toFixed(2)} AH` : "—"}
-          valueTone={credits && credits.balance_ah <= 1 ? "text-[var(--color-red-light)]" : credits && credits.balance_ah <= 10 ? "text-[var(--color-amber)]" : "text-[var(--color-teal)]"}
-          icon={<Coins size={14} />}
-        />
+        <WalletStatCard wallet={wallet} loading={walletLoading} />
+
       </div>
 
       {/* ── Block B — main row ─────────────────────────────────── */}
@@ -384,6 +380,67 @@ function StatCard({
           </div>
         )
       }
+    </div>
+  )
+}
+
+function WalletStatCard({
+  wallet,
+  loading,
+}: {
+  wallet: { address: string | null; balance_og: string; threshold_og: string } | undefined
+  loading: boolean
+}) {
+  const [copied, setCopied] = useState(false)
+  const balance = Number(wallet?.balance_og ?? 0)
+  const threshold = Number(wallet?.threshold_og ?? 0.2)
+  const tone =
+    balance <= 0 ? "text-foreground/55"
+    : balance < threshold ? "text-[var(--color-red-light)]"
+    : balance < threshold * 5 ? "text-[var(--color-amber)]"
+    : "text-[var(--color-teal)]"
+
+  const copy = async () => {
+    if (!wallet?.address) return
+    await navigator.clipboard.writeText(wallet.address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="surface p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="label-xs">Wallet balance</p>
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.04] text-foreground/50">
+          <Wallet size={14} />
+        </span>
+      </div>
+      {loading || !wallet ? (
+        <Skeleton className="h-7 w-24" />
+      ) : (
+        <>
+          <div className="flex items-baseline gap-2">
+            <p className={`text-[26px] font-semibold num-tabular tracking-tight ${tone}`}>
+              {balance.toFixed(3)}
+            </p>
+            <span className="text-[11px] text-foreground/55">OG</span>
+          </div>
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="font-mono text-[10px] text-foreground/40">
+              {wallet.address ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : "—"}
+            </span>
+            <button
+              onClick={copy}
+              disabled={!wallet.address}
+              className="focus-ring inline-flex h-4 w-4 items-center justify-center rounded text-foreground/40 hover:bg-white/10 hover:text-foreground disabled:opacity-40"
+              title={copied ? "Copied!" : "Copy wallet address"}
+              aria-label="Copy wallet address"
+            >
+              {copied ? <Check size={10} className="text-[var(--color-teal)]" /> : <Copy size={10} />}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

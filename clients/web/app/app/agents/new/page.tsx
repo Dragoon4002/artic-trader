@@ -6,8 +6,6 @@ import Link from "next/link"
 import {
   ArrowLeft,
   Bot,
-  Eye,
-  EyeOff,
   Fuel,
   Play,
   ShieldAlert,
@@ -39,8 +37,6 @@ export default function NewAgentPage() {
   }, [authHydrated, token, authStatus, hubSignIn])
 
   const [form, setForm] = useState<AgentFormState>(defaultAgentForm)
-  const [geminiApiKey, setGeminiApiKey] = useState("")
-  const [showKey, setShowKey] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const payload = useMemo(() => toCreatePayload(form), [form])
@@ -50,12 +46,12 @@ export default function NewAgentPage() {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await signedFetch("/api/v1/secrets", { method: "POST", body: { key_name: "GEMINI_API_KEY", value: geminiApiKey } })
       const backendBody = {
         name: payload.name,
         symbol: payload.symbol,
-        llm_provider: "gemini",
-        llm_model: "gemini-2.5-pro",
+        // TEE-sealed inference via 0G Compute Network — see app/llm/og_compute.py
+        llm_provider: "0g_compute",
+        llm_model: "0GM-1.0-35B-A3B",
         strategy_pool: [],
         risk_params: {
           amount_usdt: payload.amount_usdt,
@@ -261,28 +257,14 @@ export default function NewAgentPage() {
             </div>
           </Section>
 
-          <Section icon={<Sparkles size={15} />} title="LLM" hint="Gemini 2.5 Pro is the only supported model in alpha.">
-            <Field label="Gemini API Key">
-              <div className="relative">
-                <input
-                  required
-                  className={`${inputCls} pr-10`}
-                  type={showKey ? "text" : "password"}
-                  placeholder="AIza..."
-                  autoComplete="off"
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey((v) => !v)}
-                  className="absolute inset-y-0 right-2 my-auto flex h-6 w-6 items-center justify-center rounded text-foreground/40 hover:text-foreground"
-                  aria-label={showKey ? "Hide key" : "Show key"}
-                >
-                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </Field>
+          <Section icon={<Sparkles size={15} />} title="LLM" hint="TEE-sealed inference via 0G Compute Network. No API key needed.">
+            <div className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-xs text-foreground/70">
+              <p className="font-semibold text-[var(--color-teal)]">0G Compute · 0GM-1.0-35B-A3B</p>
+              <p className="mt-1 text-foreground/50">
+                Every supervisor decision runs inside a TDX-attested TEE. The provider signature
+                is logged on-chain via DecisionLogger for verifiable inference.
+              </p>
+            </div>
           </Section>
 
           <Section icon={<Timer size={15} />} title="Behavior" hint="Lifecycle flags.">
@@ -368,7 +350,7 @@ function SummaryPanel({
           }
         />
         <Row k="Session cap" v={`${(form.max_session_loss_pct * 100).toFixed(0)}%`} />
-        <Row k="LLM" v="gemini · gemini-2.5-pro" />
+        <Row k="LLM" v="0g_compute · 0GM-1.0-35B-A3B (TEE)" />
         <Row k="Auto-start" v={form.auto_start ? "yes" : "no"} />
         <Row k="Mode" v={form.live_mode ? "LIVE" : "paper"} />
       </div>

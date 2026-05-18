@@ -9,7 +9,7 @@ import { PendingHub } from "@/components/dashboard/pending-hub"
 import { DemoBadge } from "@/components/dashboard/demo-badge"
 import { PnlChartCard } from "@/components/dashboard/pnl-chart"
 import { Skeleton } from "@/components/dashboard/skeleton"
-import { useAgent, useDeleteAgent, useLogs, useStartAgent, useStopAgent, useTrades } from "@/hooks/use-queries"
+import { useAgent, useDecisions, useDeleteAgent, useLogs, useStartAgent, useStopAgent, useTrades } from "@/hooks/use-queries"
 import { useHubAuth } from "@/hooks/use-hub-auth"
 import type { AgentStatusT, LogLevelT } from "@/lib/schemas"
 import { explorerTxUrl, shortHash } from "@/lib/chain"
@@ -42,6 +42,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const { data: agent, isLoading: agentLoading } = useAgent(id)
   const { data: allTrades = [], isLoading: tradesLoading } = useTrades(agent?.id)
   const { data: logs = [], isLoading: logsLoading } = useLogs(agent?.id ?? "")
+  const { data: decisions = [], isLoading: decisionsLoading } = useDecisions(agent?.id)
   const startMut = useStartAgent()
   const stopMut = useStopAgent()
   const deleteMut = useDeleteAgent()
@@ -128,6 +129,28 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const totalPnl = closedPnls.reduce((a, b) => a + b, 0)
   const wins = closedPnls.filter((p) => p > 0).length
   const winRate = closedPnls.length ? wins / closedPnls.length : 0
+
+  const TRADES_PER_PAGE = 10
+  const [tradePage, setTradePage] = useState(0)
+  const tradePageCount = Math.max(1, Math.ceil(trades.length / TRADES_PER_PAGE))
+  const pagedTrades = useMemo(
+    () => trades.slice(tradePage * TRADES_PER_PAGE, (tradePage + 1) * TRADES_PER_PAGE),
+    [trades, tradePage]
+  )
+  useEffect(() => {
+    if (tradePage > tradePageCount - 1) setTradePage(0)
+  }, [tradePage, tradePageCount])
+
+  const DECISIONS_PER_PAGE = 10
+  const [decisionPage, setDecisionPage] = useState(0)
+  const decisionPageCount = Math.max(1, Math.ceil(decisions.length / DECISIONS_PER_PAGE))
+  const pagedDecisions = useMemo(
+    () => decisions.slice(decisionPage * DECISIONS_PER_PAGE, (decisionPage + 1) * DECISIONS_PER_PAGE),
+    [decisions, decisionPage]
+  )
+  useEffect(() => {
+    if (decisionPage > decisionPageCount - 1) setDecisionPage(0)
+  }, [decisionPage, decisionPageCount])
 
   if (agentLoading) {
     return (
@@ -298,7 +321,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               </tr>
             </thead>
             <tbody>
-              {trades.map((t) => (
+              {pagedTrades.map((t) => (
                 <tr key={t.id} className="border-b border-[rgba(194,203,212,0.04)] transition last:border-b-0 hover:bg-white/[0.02]">
                   <td className="py-2.5 pr-3">
                     <span
@@ -338,7 +361,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                         target="_blank"
                         rel="noreferrer"
                         className="text-[var(--color-blue-light)] hover:underline"
-                        title={`${t.tx_hash} (0G Galileo)`}
+                        title={`${t.tx_hash} (0G Mainnet)`}
                       >
                         {shortHash(t.tx_hash)} ↗
                       </a>
@@ -361,6 +384,117 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               ))}
             </tbody>
           </table>
+        )}
+        {trades.length > TRADES_PER_PAGE ? (
+          <div className="mt-4 flex items-center justify-between text-[11px] text-foreground/55">
+            <span className="font-mono">
+              {tradePage * TRADES_PER_PAGE + 1}–
+              {Math.min((tradePage + 1) * TRADES_PER_PAGE, trades.length)} of {trades.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                className="focus-ring rounded-md bg-white/[0.04] px-3 py-1 font-semibold uppercase tracking-wider text-foreground/70 transition hover:bg-white/[0.07] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={tradePage === 0}
+                onClick={() => setTradePage((p) => Math.max(0, p - 1))}
+              >
+                Prev
+              </button>
+              <span className="font-mono">
+                {tradePage + 1} / {tradePageCount}
+              </span>
+              <button
+                className="focus-ring rounded-md bg-white/[0.04] px-3 py-1 font-semibold uppercase tracking-wider text-foreground/70 transition hover:bg-white/[0.07] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={tradePage >= tradePageCount - 1}
+                onClick={() => setTradePage((p) => Math.min(tradePageCount - 1, p + 1))}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Card>
+
+      <Card title="Supervisor decisions">
+        {decisionsLoading ? (
+          <Skeleton height={120} />
+        ) : decisions.length === 0 ? (
+          <p className="py-8 text-center text-sm text-foreground/40">No decisions yet.</p>
+        ) : (
+          <>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[rgba(194,203,212,0.06)] text-left text-[11px] uppercase tracking-wider text-foreground/55">
+                  <th className="py-2 pr-3">Time</th>
+                  <th className="py-2 pr-3">Action</th>
+                  <th className="py-2 pr-3">Strategy</th>
+                  <th className="py-2 pr-3">Reasoning</th>
+                  <th className="py-2">On-chain</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedDecisions.map((d) => (
+                  <tr key={d.id} className="border-b border-[rgba(194,203,212,0.04)] last:border-b-0 hover:bg-white/[0.02]">
+                    <td className="py-2.5 pr-3 font-mono text-[11px] text-foreground/40">
+                      {d.created_at.slice(11, 19)}
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--color-blue-light)]">
+                        {d.action}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-3 font-mono text-[11px] text-foreground/60">
+                      {d.strategy ?? "—"}
+                    </td>
+                    <td className="py-2.5 pr-3 text-xs text-foreground/70">
+                      {d.reasoning ?? <span className="text-foreground/30">—</span>}
+                    </td>
+                    <td className="py-2.5 font-mono text-[11px]">
+                      {d.tx_hash ? (
+                        <a
+                          href={explorerTxUrl(d.tx_hash) ?? "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[var(--color-blue-light)] hover:underline"
+                          title={`${d.tx_hash} (0G Mainnet)`}
+                        >
+                          {shortHash(d.tx_hash)} ↗
+                        </a>
+                      ) : (
+                        <span className="text-foreground/30">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {decisions.length > DECISIONS_PER_PAGE ? (
+              <div className="mt-4 flex items-center justify-between text-[11px] text-foreground/55">
+                <span className="font-mono">
+                  {decisionPage * DECISIONS_PER_PAGE + 1}–
+                  {Math.min((decisionPage + 1) * DECISIONS_PER_PAGE, decisions.length)} of {decisions.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="focus-ring rounded-md bg-white/[0.04] px-3 py-1 font-semibold uppercase tracking-wider text-foreground/70 transition hover:bg-white/[0.07] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={decisionPage === 0}
+                    onClick={() => setDecisionPage((p) => Math.max(0, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <span className="font-mono">
+                    {decisionPage + 1} / {decisionPageCount}
+                  </span>
+                  <button
+                    className="focus-ring rounded-md bg-white/[0.04] px-3 py-1 font-semibold uppercase tracking-wider text-foreground/70 transition hover:bg-white/[0.07] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={decisionPage >= decisionPageCount - 1}
+                    onClick={() => setDecisionPage((p) => Math.min(decisionPageCount - 1, p + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </>
         )}
       </Card>
 

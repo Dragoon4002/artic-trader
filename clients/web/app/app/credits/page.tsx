@@ -71,6 +71,7 @@ const REASON_TONE: Record<string, { text: string; bg: string; dot: string }> = {
 
 const QUOTA_AH = 100
 const STORAGE_QUOTA_MB = 512
+const SHOW_CREDITS = false
 
 export default function CreditsPage() {
   const { data: credits, isLoading: creditsLoading } = useCredits()
@@ -110,6 +111,16 @@ export default function CreditsPage() {
         subtitle="1 AH = 1 agent-hour. Hub debits 1/60 AH per alive agent per minute."
       />
 
+      {!SHOW_CREDITS && (
+        <section className="surface flex flex-col items-center justify-center gap-3 p-16 text-center">
+          <span className="rounded-full bg-[var(--color-accent-warm)]/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-accent-warm)]">
+            Coming soon
+          </span>
+          <p className="text-sm text-foreground/55">Credits ledger ships next release.</p>
+        </section>
+      )}
+
+      {SHOW_CREDITS && (<>
       <PendingHub what="Balance + ledger stream from the hub credits tables." />
 
       {/* <div className="flex items-center gap-2 text-xs text-foreground/55">
@@ -315,6 +326,7 @@ export default function CreditsPage() {
           </table>
         )}
       </section>
+      </>)}
 
     </div>
   )

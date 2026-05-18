@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowRight, Check, Copy } from "lucide-react"
+import { ArrowRight, Check } from "lucide-react"
 import { useWallet } from "@/hooks/use-wallet"
 import { useHubAuth } from "@/hooks/use-hub-auth"
 import { useInjectedProviders } from "@/hooks/use-injected-providers"
@@ -10,7 +10,7 @@ import { shortenAddr } from "@/lib/identity"
 
 export function ConnectWalletClient() {
   const { address, isConnected, openConnect, disconnect, revokeSupported } = useWallet()
-  const { token, status, error, run, signOut } = useHubAuth()
+  const { status, error, run, signOut } = useHubAuth()
   const providers = useInjectedProviders()
   const [showPicker, setShowPicker] = useState(false)
 
@@ -127,7 +127,6 @@ export function ConnectWalletClient() {
             Go to dashboard
             <ArrowRight size={16} />
           </Link>
-          <JwtCopyRow token={token?.access_token ?? null} />
           <p className="text-center text-[11px] text-foreground/50">
             Signed in as <span className="font-mono">{shortenAddr(address)}</span>
           </p>
@@ -208,29 +207,3 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
   )
 }
 
-function JwtCopyRow({ token }: { token: string | null }) {
-  const [copied, setCopied] = useState(false)
-  if (!token) return null
-  const copy = async () => {
-    await navigator.clipboard.writeText(token)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
-  return (
-    <div className="rounded-md border border-white/10 bg-white/[0.02] p-3">
-      <p className="text-[11px] font-semibold text-foreground/60">Hub JWT (Postman)</p>
-      <div className="mt-2 flex items-start gap-2">
-        <code className="flex-1 min-w-0 truncate rounded bg-black/40 px-2 py-1 font-mono text-[11px] text-foreground/80">
-          {token}
-        </code>
-        <button
-          onClick={copy}
-          className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-foreground/70 hover:text-foreground"
-        >
-          {copied ? <Check size={11} /> : <Copy size={11} />}
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-    </div>
-  )
-}

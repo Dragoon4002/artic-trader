@@ -45,7 +45,7 @@ const features = [
     title: "Verifiable on-chain audit",
     tag: "0G Chain",
     description:
-      "DecisionLogger + TradeLogger emit indexed events for every supervisor verdict and fill on 0G Galileo. Reasoning + trade JSON sealed on 0G Storage, bound by hash.",
+      "DecisionLogger + TradeLogger emit indexed events for every supervisor verdict and fill on 0G Mainnet. Reasoning + trade JSON sealed on 0G Storage, bound by hash.",
     icon: "/assets/landing/icons/frozen-globe.svg",
     accent: "#6FCAA0",
     pills: ["0G Chain", "0G Storage", "TradeLogger"],

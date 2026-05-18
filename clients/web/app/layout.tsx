@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { Web3Providers } from "@/components/providers/web3-providers";
+import { LoadingScreen } from "@/components/shared/loading-screen";
 import "./globals.css";
 
 const inter = Inter({
@@ -58,6 +59,7 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} dark antialiased`}
     >
       <body className="min-h-screen flex flex-col">
+        <LoadingScreen />
         <Web3Providers>{children}</Web3Providers>
       </body>
     </html>

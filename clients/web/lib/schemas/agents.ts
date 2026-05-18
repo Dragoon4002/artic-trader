@@ -90,6 +90,20 @@ export const TradeSchema = z.object({
 })
 export type Trade = z.infer<typeof TradeSchema>
 
+// ── Decision (supervisor LLM call) ─────────────────────────────────────────
+
+export const DecisionSchema = z.object({
+  id: UuidSchema,
+  agent_id: UuidSchema,
+  action: z.string(),
+  strategy: z.string().nullable(),
+  reasoning: z.string().nullable(),
+  tx_hash: z.string().nullable(),
+  reasoning_cid: z.string().nullable(),
+  created_at: Iso8601Schema,
+})
+export type Decision = z.infer<typeof DecisionSchema>
+
 // ── Log entry ──────────────────────────────────────────────────────────────
 
 export const LogEntrySchema = z.object({

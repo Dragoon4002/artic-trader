@@ -41,13 +41,15 @@ export function useWallet() {
   useEffect(() => {
     const eth = getDefaultInjected()
     if (!eth?.on) return
-    const log = (label: string) => (...args: unknown[]) =>
-      console.log(`[wallet] ${label}:`, ...args)
-    eth.on("accountsChanged", log("accountsChanged"))
-    eth.on("chainChanged", log("chainChanged"))
+    const onAccounts = (accounts: string[]) =>
+      console.log("[wallet] accountsChanged:", accounts)
+    const onChain = (chainId: string) =>
+      console.log("[wallet] chainChanged:", chainId)
+    eth.on("accountsChanged", onAccounts)
+    eth.on("chainChanged", onChain)
     return () => {
-      eth.removeListener?.("accountsChanged", log("accountsChanged"))
-      eth.removeListener?.("chainChanged", log("chainChanged"))
+      eth.removeListener?.("accountsChanged", onAccounts)
+      eth.removeListener?.("chainChanged", onChain)
     }
   }, [])
 

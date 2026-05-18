@@ -4,13 +4,16 @@
  * Hub auth via EIP-4361 (SIWE) on 0G mainnet.
  *
  * Flow:
- *   1. user connects an injected EVM wallet (MetaMask etc.) via useWallet()
- *   2. fetch nonce from hub keyed on the wallet address
- *   3. personal_sign the hub's canonical sign-in message
+ *   1. user connects an injected EVM wallet via useWallet() (EIP-6963 picker)
+ *   2. fetch nonce from hub keyed on wallet address
+ *   3. wagmi.useSignMessage personal_signs the canonical sign-in message —
+ *      routes through the connector wagmi already bound to, so multi-wallet
+ *      setups never hit the wrong injected provider
  *   4. POST signature to /auth/verify → JWT
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useSignMessage } from "wagmi"
 import {
   buildSigninMessage,
   clearJwt,
@@ -34,19 +37,9 @@ const SESSION_TTL_SECONDS = 8 * 60 * 60
 
 type Status = "idle" | "running" | "ok" | "error"
 
-interface Eip1193 {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
-}
-
-function getInjected(): Eip1193 | null {
-  if (typeof window === "undefined") return null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w = window as any
-  return (w.ethereum as Eip1193 | undefined) ?? null
-}
-
 export function useHubAuth() {
   const { address: walletAddress, isConnected, openConnect } = useWallet()
+  const { signMessageAsync } = useSignMessage()
   const [token, setToken] = useState<StoredJwt | null>(null)
   const [status, setStatus] = useState<Status>("idle")
   const [error, setError] = useState<string | null>(null)
@@ -64,8 +57,7 @@ export function useHubAuth() {
 
   const run = useCallback(async () => {
     if (inFlight.current) return
-    const eth = getInjected()
-    if (!eth || !walletAddress) {
+    if (!walletAddress || !isConnected) {
       setError("connect a wallet first")
       setStatus("error")
       return
@@ -74,17 +66,15 @@ export function useHubAuth() {
     setStatus("running")
     setError(null)
     try {
-      // Re-request accounts: MetaMask invalidates dapp permission across
-      // network switches / page reloads. Without this, personal_sign throws
-      // "method and/or account has not been authorized by the user".
-      const accounts = (await eth.request({
-        method: "eth_requestAccounts",
-      })) as string[]
-      if (!accounts?.length) {
-        throw new Error("no wallet account available")
+      const address = walletAddress
+
+      let nonce: Awaited<ReturnType<typeof fetchNonce>>
+      try {
+        nonce = await fetchNonce(HUB_URL, address, CHAIN)
+      } catch (e) {
+        throw new Error(`nonce fetch failed: ${(e as Error).message}`)
       }
-      const address = accounts[0]
-      const nonce = await fetchNonce(HUB_URL, address, CHAIN)
+
       const session = newSessionKeypair()
       const session_expires_at_iso = new Date(
         Date.now() + SESSION_TTL_SECONDS * 1000,
@@ -100,15 +90,15 @@ export function useHubAuth() {
         session_expires_at_iso,
       })
 
-      const msgHex =
-        "0x" +
-        Array.from(new TextEncoder().encode(message))
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("")
-      const sig = (await eth.request({
-        method: "personal_sign",
-        params: [msgHex, address],
-      })) as string
+      let sig: string
+      try {
+        sig = await signMessageAsync({
+          message,
+          account: address as `0x${string}`,
+        })
+      } catch (e) {
+        throw new Error(`sign failed: ${(e as Error).message}`)
+      }
 
       const verify = await verifySignature({
         hubUrl: HUB_URL,
@@ -134,12 +124,13 @@ export function useHubAuth() {
       setToken(stored)
       setStatus("ok")
     } catch (e: unknown) {
+      console.error("[hub-auth] run failed:", e)
       setStatus("error")
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       inFlight.current = false
     }
-  }, [walletAddress])
+  }, [walletAddress, isConnected, signMessageAsync])
 
   const signOut = useCallback(() => {
     clearJwt()
