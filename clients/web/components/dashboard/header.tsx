@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { Menu, X } from "lucide-react"
 import { ConnectButton } from "@/components/wallet/connect-button"
 import { CreditsWidget } from "@/components/dashboard/credits-widget"
+import { RechargePrompt } from "@/components/dashboard/recharge-prompt"
 import { WarningsToggle } from "@/components/dashboard/warnings-toggle"
 
 const NAV = [
@@ -69,6 +70,7 @@ export function DashboardHeader() {
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-2 md:flex">
             <WarningsToggle />
+            <RechargePrompt />
             <CreditsWidget />
           </div>
           <ConnectButton />
@@ -120,9 +122,12 @@ export function DashboardHeader() {
                 )
               })}
             </ul>
-            <div className="mt-2 flex items-center justify-between gap-2 border-t border-[rgba(194,203,212,0.06)] px-2 py-3">
-              <WarningsToggle />
-              <CreditsWidget />
+            <div className="mt-2 flex flex-col gap-2 border-t border-[rgba(194,203,212,0.06)] px-2 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <WarningsToggle />
+                <CreditsWidget />
+              </div>
+              <RechargePrompt />
             </div>
           </nav>
         </div>

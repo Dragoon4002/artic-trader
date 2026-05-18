@@ -48,7 +48,7 @@ export function CtaBanner() {
               Launch app <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              href="https://github.com/Dragoon4002/Artic_trader"
+              href="https://github.com/Dragoon4002/artic-trader"
               className={cn(
                 buttonVariants({ variant: "outline" }),
                 "border-foreground/20 text-foreground hover:border-foreground/40 hover:bg-foreground/5 rounded-full px-7 h-12 text-[15px] font-semibold bg-white/[0.04] backdrop-blur-sm gap-2"

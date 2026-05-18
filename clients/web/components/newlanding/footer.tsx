@@ -14,10 +14,8 @@ const resources = [
 ];
 
 const socials = [
-  { label: "Twitter / X", href: "#", Icon: X },
-  { label: "LinkedIn", href: "#", Icon: null },
-  { label: "Discord", href: "#", Icon: MessageCircle },
-  { label: "GitHub", href: "https://github.com/Dragoon4002/Artic_trader", Icon: GitBranch },
+  { label: "Twitter / X", href: "https://x.com/artic_trade", Icon: X },
+  { label: "GitHub", href: "https://github.com/Dragoon4002/artic-trader", Icon: GitBranch },
 ];
 
 export function Footer() {

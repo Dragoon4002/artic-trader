@@ -7,16 +7,23 @@ export function LoadingScreen() {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
+    let done = false;
     const finish = () => {
+      if (done) return;
+      done = true;
       setFading(true);
       window.setTimeout(() => setVisible(false), 400);
     };
-    if (document.readyState === "complete") {
+    if (document.readyState !== "loading") {
       finish();
       return;
     }
     window.addEventListener("load", finish);
-    return () => window.removeEventListener("load", finish);
+    const fallback = window.setTimeout(finish, 1500);
+    return () => {
+      window.removeEventListener("load", finish);
+      window.clearTimeout(fallback);
+    };
   }, []);
 
   if (!visible) return null;
