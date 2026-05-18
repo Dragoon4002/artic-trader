@@ -74,16 +74,67 @@ export function useHubAuth() {
     try {
       const address = walletAddress
 
-      // Force wallet onto 0G Mainnet before signing. Wallet may auto-add the
-      // chain if unknown; otherwise the user has to confirm the switch.
-      if (currentChainId !== TARGET_CHAIN_ID) {
+      // Read the wallet's ACTUAL chain — wagmi's useChainId returns the
+      // wagmi-configured chain, not what the wallet is currently pointing at.
+      let walletChainHex = ""
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eth = (typeof window !== "undefined" ? (window as any).ethereum : null)
+      if (eth?.request) {
         try {
-          await switchChainAsync({ chainId: TARGET_CHAIN_ID })
+          walletChainHex = (await eth.request({ method: "eth_chainId" })) as string
         } catch (e) {
-          throw new Error(
-            `please switch your wallet to 0G Mainnet (chain ${TARGET_CHAIN_ID}) and retry: ${(e as Error).message}`,
-          )
+          console.warn("[hub-auth] eth_chainId failed:", e)
         }
+      }
+      const walletChainId = walletChainHex ? parseInt(walletChainHex, 16) : currentChainId
+      console.log(
+        "[hub-auth] chain check wallet=%s wagmi=%s target=%s",
+        walletChainId,
+        currentChainId,
+        TARGET_CHAIN_ID,
+      )
+
+      if (walletChainId !== TARGET_CHAIN_ID) {
+        const targetHex = "0x" + TARGET_CHAIN_ID.toString(16)
+        console.log("[hub-auth] switching wallet to", targetHex)
+        try {
+          // wagmi switchChain first (uses connector-aware path)
+          await switchChainAsync({ chainId: TARGET_CHAIN_ID })
+        } catch {
+          // Fallback: raw EIP-3326 + EIP-3085 to inject chain if unknown
+          if (eth?.request) {
+            try {
+              await eth.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: targetHex }],
+              })
+            } catch (switchErr) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              if ((switchErr as any)?.code === 4902 || /unrecognized/i.test(String(switchErr))) {
+                await eth.request({
+                  method: "wallet_addEthereumChain",
+                  params: [
+                    {
+                      chainId: targetHex,
+                      chainName: "0G Mainnet",
+                      nativeCurrency: { name: "0G", symbol: "0G", decimals: 18 },
+                      rpcUrls: ["https://evmrpc.0g.ai"],
+                      blockExplorerUrls: ["https://chainscan.0g.ai"],
+                    },
+                  ],
+                })
+              } else {
+                throw switchErr
+              }
+            }
+          }
+        }
+        // Verify
+        const newHex = (await eth.request({ method: "eth_chainId" })) as string
+        if (parseInt(newHex, 16) !== TARGET_CHAIN_ID) {
+          throw new Error("wallet did not switch to 0G Mainnet — switch manually and retry")
+        }
+        console.log("[hub-auth] switched ok")
       }
 
       let nonce: Awaited<ReturnType<typeof fetchNonce>>
