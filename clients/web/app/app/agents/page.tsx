@@ -59,6 +59,14 @@ export default function AgentsPage() {
 
   const aliveCount = agents.filter((a) => a.status === "alive").length
   const haltedCount = agents.filter((a) => a.status === "halted").length
+  const tradesByAgent = useMemo(() => {
+    const grouped: Record<string, DemoTrade[]> = {}
+    for (const trade of trades) {
+      if (!grouped[trade.agent_id]) grouped[trade.agent_id] = []
+      grouped[trade.agent_id].push(trade)
+    }
+    return grouped
+  }, [trades])
   const loading = agentsLoading || tradesLoading
 
   return (
@@ -187,7 +195,7 @@ export default function AgentsPage() {
               key={a.id}
               agent={a}
               realised={totals.realisedByAgent[a.id] ?? 0}
-              trades={trades.filter((t) => t.agent_id === a.id)}
+              trades={tradesByAgent[a.id] ?? []}
             />
           ))}
         </div>
