@@ -1,20 +1,55 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Navbar } from "@/components/newlanding/navbar";
-import { HeroArctic } from "@/components/newlanding/hero-arctic";
-import { FeaturesBento } from "@/components/newlanding/features-bento";
-import { StrategyCatalog } from "@/components/newlanding/strategy-catalog";
-import { HowItWorksSection } from "@/components/newlanding/how-it-works-single";
-import { LlmMatrix } from "@/components/newlanding/llm-matrix";
-import { OnchainProof } from "@/components/newlanding/onchain-proof";
-import { LivePnlFeed } from "@/components/newlanding/live-pnl-feed";
-import { Faq } from "@/components/newlanding/faq";
-import { Waitlist } from "@/components/newlanding/waitlist";
-import { CtaBanner } from "@/components/newlanding/cta-banner";
-import { Footer } from "@/components/newlanding/footer";
 import { LandingSnapContainer } from "@/components/newlanding/landing-snap-container";
 import { LandingThemeProvider, useLandingTheme } from "@/components/newlanding/theme-context";
 import { Hero } from "@/components/newlanding/hero";
+
+function SectionFallback() {
+  return <div className="min-h-screen w-full bg-background" aria-hidden />;
+}
+
+const FeaturesBento = dynamic(
+  () => import("@/components/newlanding/features-bento").then((m) => m.FeaturesBento),
+  { loading: SectionFallback }
+);
+const StrategyCatalog = dynamic(
+  () => import("@/components/newlanding/strategy-catalog").then((m) => m.StrategyCatalog),
+  { loading: SectionFallback }
+);
+const HowItWorksSection = dynamic(
+  () => import("@/components/newlanding/how-it-works-single").then((m) => m.HowItWorksSection),
+  { loading: SectionFallback }
+);
+const LlmMatrix = dynamic(
+  () => import("@/components/newlanding/llm-matrix").then((m) => m.LlmMatrix),
+  { loading: SectionFallback }
+);
+const OnchainProof = dynamic(
+  () => import("@/components/newlanding/onchain-proof").then((m) => m.OnchainProof),
+  { loading: SectionFallback }
+);
+const LivePnlFeed = dynamic(
+  () => import("@/components/newlanding/live-pnl-feed").then((m) => m.LivePnlFeed),
+  { loading: SectionFallback }
+);
+const Faq = dynamic(
+  () => import("@/components/newlanding/faq").then((m) => m.Faq),
+  { loading: SectionFallback }
+);
+const Waitlist = dynamic(
+  () => import("@/components/newlanding/waitlist").then((m) => m.Waitlist),
+  { loading: SectionFallback }
+);
+const CtaBanner = dynamic(
+  () => import("@/components/newlanding/cta-banner").then((m) => m.CtaBanner),
+  { loading: SectionFallback }
+);
+const Footer = dynamic(
+  () => import("@/components/newlanding/footer").then((m) => m.Footer),
+  { loading: SectionFallback }
+);
 
 function LandingShell() {
   const ctx = useLandingTheme();
@@ -25,7 +60,7 @@ function LandingShell() {
       <div className="bg-background text-foreground">
         <Navbar />
         <LandingSnapContainer
-          top={[Hero ? <Hero key="hero" /> : <HeroArctic key="hero" />]}
+          top={[<Hero key="hero" />]}
           middle={[
             <FeaturesBento key="bento" />,
             <StrategyCatalog key="strat" />,
