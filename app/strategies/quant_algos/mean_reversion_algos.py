@@ -55,13 +55,15 @@ def rsi_signal(
     """RSI. Oversold (< 30) -> positive, overbought (> 70) -> negative."""
     if len(prices) < period + 1:
         return 0.0, f"warming up ({len(prices)}/{period+1})"
+
     gains, losses = [], []
-    for i in range(1, len(prices)):
+    start = len(prices) - period
+    for i in range(start, len(prices)):
         ch = prices[i] - prices[i - 1]
         gains.append(ch if ch > 0 else 0)
         losses.append(-ch if ch < 0 else 0)
-    avg_gain = sum(gains[-period:]) / period
-    avg_loss = sum(losses[-period:]) / period
+    avg_gain = sum(gains) / period
+    avg_loss = sum(losses) / period
     if avg_loss == 0:
         rsi = 100.0
     else:
