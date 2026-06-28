@@ -5,6 +5,8 @@ import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Too
 
 interface Point { t: number; label: string; total: number }
 
+const MAX_RENDERED_POINTS = 600
+
 export function PnlAreaChart({
   trades,
   height = 300,
@@ -25,7 +27,7 @@ export function PnlAreaChart({
       const ts = new Date(tr.closed_at!).getTime()
       out.push({ t: ts, label: fmtTick(new Date(ts)), total: running })
     }
-    return out
+    return downsampleLttb(out, MAX_RENDERED_POINTS)
   }, [trades])
 
   if (data.length <= 1) {
@@ -66,6 +68,53 @@ export function PnlAreaChart({
       </ResponsiveContainer>
     </div>
   )
+}
+
+function downsampleLttb(points: Point[], threshold: number): Point[] {
+  if (threshold >= points.length || threshold < 3) return points
+
+  const sampled: Point[] = [points[0]]
+  const bucketSize = (points.length - 2) / (threshold - 2)
+  let anchorIndex = 0
+
+  for (let i = 0; i < threshold - 2; i++) {
+    const avgStart = Math.floor((i + 1) * bucketSize) + 1
+    const avgEnd = Math.min(Math.floor((i + 2) * bucketSize) + 1, points.length)
+    const avgLength = avgEnd - avgStart
+
+    let avgT = 0
+    let avgTotal = 0
+    for (let j = avgStart; j < avgEnd; j++) {
+      avgT += points[j].t
+      avgTotal += points[j].total
+    }
+    avgT /= avgLength || 1
+    avgTotal /= avgLength || 1
+
+    const rangeStart = Math.floor(i * bucketSize) + 1
+    const rangeEnd = Math.min(Math.floor((i + 1) * bucketSize) + 1, points.length - 1)
+    const anchor = points[anchorIndex]
+    let nextAnchor = points[rangeStart]
+    let maxArea = -1
+
+    for (let j = rangeStart; j < rangeEnd; j++) {
+      const candidate = points[j]
+      const area = Math.abs(
+        (anchor.t - avgT) * (candidate.total - anchor.total) -
+          (anchor.t - candidate.t) * (avgTotal - anchor.total),
+      )
+      if (area > maxArea) {
+        maxArea = area
+        nextAnchor = candidate
+        anchorIndex = j
+      }
+    }
+
+    sampled.push(nextAnchor)
+  }
+
+  sampled.push(points[points.length - 1])
+  return sampled
 }
 
 function fmtTick(d: Date) {
