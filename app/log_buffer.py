@@ -4,6 +4,7 @@ In-memory log buffer for AI engine output. Used to stream live logs to frontend.
 from datetime import datetime
 from typing import List, Literal
 from collections import deque
+from itertools import islice
 
 LogLevel = Literal["init", "llm", "start", "tick", "action", "sl_tp", "stop", "error", "warn", "supervisor"]
 
@@ -31,11 +32,16 @@ def clear() -> None:
 
 
 def get_logs(limit: int = 500) -> List[dict]:
-    """Return last `limit` log entries, newest last."""
-    items = list(_buffer)
-    if limit and len(items) > limit:
-        items = items[-limit:]
-    return items
+    """Return last `limit` log entries, newest last.
+
+    Avoid materializing the full ring buffer when callers only need a small
+    tail slice for the live logs endpoint.
+    """
+    if not limit or limit >= len(_buffer):
+        return list(_buffer)
+
+    start = max(len(_buffer) - max(limit, 0), 0)
+    return list(islice(_buffer, start, None))
 
 
 def get_logs_response(running: bool) -> dict:
