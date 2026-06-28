@@ -88,9 +88,13 @@ def stochastic_signal(
     if high == low:
         return 0.0, "flat range"
     k = 100 * (close - low) / (high - low)
-    # Simplified %D = SMA of %K
+    # Simplified %D = SMA of only the trailing %K values it consumes.
     k_vals = []
-    for i in range(len(candles) - k_period, len(candles)):
+    if d_period <= k_period:
+        first_d_index = len(candles) - d_period
+    else:
+        first_d_index = len(candles)
+    for i in range(first_d_index, len(candles)):
         h = max(c["high"] for c in candles[i - k_period + 1 : i + 1])
         l_ = min(c["low"] for c in candles[i - k_period + 1 : i + 1])
         c_ = candles[i]["close"]
