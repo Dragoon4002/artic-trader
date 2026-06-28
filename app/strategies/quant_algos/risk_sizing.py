@@ -7,12 +7,13 @@ from typing import List, Tuple, Optional
 def _atr(candles: List[dict], period: int = 14) -> Optional[float]:
     if not candles or len(candles) < period + 1:
         return None
-    tr_list = []
-    for i in range(1, len(candles)):
-        h, l_ = candles[i]["high"], candles[i]["low"]
-        pc = candles[i - 1]["close"]
-        tr_list.append(max(h - l_, abs(h - pc), abs(l_ - pc)))
-    return sum(tr_list[-period:]) / period if len(tr_list) >= period else None
+    recent = candles[-(period + 1):]
+    tr_sum = 0.0
+    for i in range(1, len(recent)):
+        h, l_ = recent[i]["high"], recent[i]["low"]
+        pc = recent[i - 1]["close"]
+        tr_sum += max(h - l_, abs(h - pc), abs(l_ - pc))
+    return tr_sum / period
 
 
 def kelly_size(
