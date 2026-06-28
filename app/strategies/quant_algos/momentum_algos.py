@@ -14,12 +14,13 @@ def _closes(candles: List[dict]) -> List[float]:
 def _atr(candles: List[dict], period: int = 14) -> Optional[float]:
     if not candles or len(candles) < period + 1:
         return None
-    tr_list = []
-    for i in range(1, len(candles)):
-        h, l_ = candles[i]["high"], candles[i]["low"]
-        pc = candles[i - 1]["close"]
-        tr_list.append(max(h - l_, abs(h - pc), abs(l_ - pc)))
-    return sum(tr_list[-period:]) / period if len(tr_list) >= period else None
+    recent = candles[-(period + 1):]
+    tr_sum = 0.0
+    for i in range(1, len(recent)):
+        h, l_ = recent[i]["high"], recent[i]["low"]
+        pc = recent[i - 1]["close"]
+        tr_sum += max(h - l_, abs(h - pc), abs(l_ - pc))
+    return tr_sum / period
 
 
 def simple_momentum(
@@ -163,15 +164,16 @@ def adx_filter(
     if not candles or len(candles) < period * 2:
         return 0.0, f"warming up ({len(candles)}/{period*2})"
     # Simplified ADX: use +DM -DM from high/low/close
+    recent = candles[-(period + 1):]
     plus_dm = []
     minus_dm = []
     tr_list = []
-    for i in range(1, len(candles)):
-        h, l_, c = candles[i]["high"], candles[i]["low"], candles[i]["close"]
-        pc = candles[i - 1]["close"]
+    for i in range(1, len(recent)):
+        h, l_, c = recent[i]["high"], recent[i]["low"], recent[i]["close"]
+        pc = recent[i - 1]["close"]
         tr_list.append(max(h - l_, abs(h - pc), abs(l_ - pc)))
-        up = h - candles[i - 1]["high"]
-        down = candles[i - 1]["low"] - l_
+        up = h - recent[i - 1]["high"]
+        down = recent[i - 1]["low"] - l_
         plus_dm.append(up if up > down and up > 0 else 0)
         minus_dm.append(down if down > up and down > 0 else 0)
     # Smooth and compute +DI -DI then ADX (simplified)
