@@ -34,19 +34,17 @@ def obv_trend(
     if not candles or len(candles) < lookback + 1:
         return 0.0, f"warming up ({len(candles)}/{lookback+1})"
     obv = 0
+    obv_prev = 0
+    prev_cutoff = len(candles) - lookback
     for i in range(1, len(candles)):
         v = candles[i].get("volume", 0)
         if candles[i]["close"] >= candles[i - 1]["close"]:
-            obv += v
+            delta = v
         else:
-            obv -= v
-    obv_prev = 0
-    for i in range(1, len(candles) - lookback):
-        v = candles[i].get("volume", 0)
-        if candles[i]["close"] >= candles[i - 1]["close"]:
-            obv_prev += v
-        else:
-            obv_prev -= v
+            delta = -v
+        obv += delta
+        if i < prev_cutoff:
+            obv_prev += delta
     if obv_prev == 0:
         return 0.0, "obv_prev zero"
     change_pct = (obv - obv_prev) / abs(obv_prev)
