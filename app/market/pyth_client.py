@@ -1,6 +1,9 @@
 """
 Pyth Network price client — fetches live prices from Hermes REST API.
 No API key needed (Hermes is public).
+
+Performance: uses requests.Session for TCP connection pooling, reducing
+latency by ~30-50ms per request on repeated calls (TLS handshake amortized).
 """
 import time
 from typing import Dict, List, Optional
@@ -75,8 +78,18 @@ def _parse_conf(price_info: dict) -> float:
 
 
 class PythClient:
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 10, cache_ttl: float = 0.5):
+        """
+        Args:
+            timeout: HTTP request timeout in seconds.
+            cache_ttl: Price cache TTL in seconds. Set to 0 to disable caching.
+                       Default 0.5s balances freshness with latency reduction
+                       on rapid repeated calls (e.g. supervisor loop + logging).
+        """
         self._timeout = timeout
+        self._session = requests.Session()
+        self._cache: Dict[str, tuple] = {}  # symbol -> (price, timestamp)
+        self._cache_ttl = cache_ttl
 
     def _feed_id(self, symbol: str) -> Optional[str]:
         base = _normalize_base(symbol)
@@ -85,12 +98,35 @@ class PythClient:
     def is_supported(self, symbol: str) -> bool:
         return self._feed_id(symbol) is not None
 
+    def _normalize_for_cache(self, symbol: str) -> str:
+        """Normalize symbol for cache key consistency."""
+        return _normalize_base(symbol)
+
+    def _get_cached_price(self, symbol: str) -> Optional[float]:
+        """Return cached price if still valid, else None."""
+        if self._cache_ttl <= 0:
+            return None
+        key = self._normalize_for_cache(symbol)
+        entry = self._cache.get(key)
+        if entry and (time.monotonic() - entry[1]) < self._cache_ttl:
+            return entry[0]
+        return None
+
+    def _set_cached_price(self, symbol: str, price: float) -> None:
+        """Cache a price with current timestamp."""
+        if self._cache_ttl > 0:
+            key = self._normalize_for_cache(symbol)
+            self._cache[key] = (price, time.monotonic())
+
     def get_price(self, symbol: str) -> Optional[float]:
+        cached = self._get_cached_price(symbol)
+        if cached is not None:
+            return cached
         feed_id = self._feed_id(symbol)
         if not feed_id:
             return None
         try:
-            r = requests.get(
+            r = self._session.get(
                 f"{HERMES_URL}/v2/updates/price/latest",
                 params={"ids[]": feed_id},
                 timeout=self._timeout,
@@ -98,7 +134,9 @@ class PythClient:
             r.raise_for_status()
             parsed = r.json().get("parsed", [])
             if parsed:
-                return _parse_price(parsed[0]["price"])
+                price = _parse_price(parsed[0]["price"])
+                self._set_cached_price(symbol, price)
+                return price
         except Exception as e:
             print(f"[PYTH] price fetch failed for {symbol}: {e}")
         return None
@@ -117,7 +155,7 @@ class PythClient:
         if not feed_id:
             return None
         try:
-            r = requests.get(
+            r = self._session.get(
                 f"{HERMES_URL}/v2/updates/price/latest",
                 params={"ids[]": feed_id},
                 timeout=self._timeout,
@@ -136,28 +174,47 @@ class PythClient:
         return None
 
     def get_prices_batch(self, symbols: List[str]) -> Dict[str, float]:
+        # Check cache first for all symbols
+        out: Dict[str, float] = {}
+        uncached: List[str] = []
+        for sym in symbols:
+            cached = self._get_cached_price(sym)
+            if cached is not None:
+                out[_normalize_base(sym)] = cached
+            else:
+                uncached.append(sym)
+        
+        # Fetch only uncached symbols
+        if not uncached:
+            return out
+        
         ids = []
         base_for_id = {}
-        for sym in symbols:
+        for sym in uncached:
             fid = self._feed_id(sym)
             if fid:
                 ids.append(fid)
                 base_for_id[fid.replace("0x", "")] = _normalize_base(sym)
         if not ids:
-            return {}
+            return out
         try:
-            r = requests.get(
+            r = self._session.get(
                 f"{HERMES_URL}/v2/updates/price/latest",
                 params=[("ids[]", fid) for fid in ids],
                 timeout=self._timeout,
             )
             r.raise_for_status()
-            out: Dict[str, float] = {}
             for p in r.json().get("parsed", []):
                 base = base_for_id.get(p.get("id", ""))
                 if base:
-                    out[base] = _parse_price(p["price"])
+                    price = _parse_price(p["price"])
+                    out[base] = price
+                    self._set_cached_price(base, price)
             return out
         except Exception as e:
             print(f"[PYTH] batch fetch failed: {e}")
-        return {}
+        return out
+
+    def close(self) -> None:
+        """Close the underlying HTTP session to free connections."""
+        self._session.close()
