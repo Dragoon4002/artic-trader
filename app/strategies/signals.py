@@ -72,47 +72,63 @@ def compute_strategy_signal(
     """
     strategy_lower = (strategy or "momentum").lower().strip()
     lookback = max(2, plan.lookback)
-    prices = _prices_from_history(price_history)
-    cdicts = _candles_to_dicts(candles)
+    prices: Optional[List[float]] = None
+    cdicts: Optional[List[dict]] = None
 
-    # Price-only algos (work with price_history)
+    def get_prices() -> List[float]:
+        nonlocal prices
+        if prices is None:
+            prices = _prices_from_history(price_history)
+        return prices
+
+    def get_cdicts() -> Optional[List[dict]]:
+        nonlocal cdicts
+        if cdicts is None:
+            cdicts = _candles_to_dicts(candles)
+        return cdicts
+
+    # Price-only algos (work with price_history). Keep candle conversion lazy so
+    # common price-history strategies do not allocate an unused OHLC dict list on
+    # every engine tick when a candle cache is present.
     if strategy_lower == "momentum":
-        return simple_momentum(prices, lookback=lookback)
+        return simple_momentum(get_prices(), lookback=lookback)
     if strategy_lower == "dual_momentum":
-        return dual_momentum(prices, short_lookback=lookback // 2, long_lookback=lookback)
+        return dual_momentum(get_prices(), short_lookback=lookback // 2, long_lookback=lookback)
     if strategy_lower == "breakout":
-        return breakout(prices, period=lookback)
+        return breakout(get_prices(), period=lookback)
     if strategy_lower == "donchian_channel":
-        return donchian_channel(prices, period=lookback)
+        return donchian_channel(get_prices(), period=lookback)
     if strategy_lower == "ma_crossover":
-        return ma_crossover(prices, fast=max(2, lookback // 2), slow=lookback)
+        return ma_crossover(get_prices(), fast=max(2, lookback // 2), slow=lookback)
     if strategy_lower == "ema_crossover":
-        return ema_crossover(prices, fast=max(2, lookback // 2), slow=lookback)
+        return ema_crossover(get_prices(), fast=max(2, lookback // 2), slow=lookback)
     if strategy_lower == "macd_signal":
-        return macd_signal(prices, fast=12, slow=26, signal_period=9)
+        return macd_signal(get_prices(), fast=12, slow=26, signal_period=9)
     if strategy_lower == "z_score":
-        return z_score(prices, lookback=lookback)
+        return z_score(get_prices(), lookback=lookback)
     if strategy_lower == "bollinger_reversion":
-        return bollinger_reversion(prices, period=lookback)
+        return bollinger_reversion(get_prices(), period=lookback)
     if strategy_lower == "rsi_signal":
-        return rsi_signal(prices, period=min(14, lookback))
+        return rsi_signal(get_prices(), period=min(14, lookback))
     if strategy_lower == "range_sr":
-        return range_sr(prices, lookback=lookback)
+        return range_sr(get_prices(), lookback=lookback)
     if strategy_lower == "bollinger_squeeze":
-        return bollinger_squeeze(prices, period=lookback)
+        return bollinger_squeeze(get_prices(), period=lookback)
     if strategy_lower == "linear_regression_channel":
-        return linear_regression_channel(prices, lookback=lookback)
+        return linear_regression_channel(get_prices(), lookback=lookback)
     if strategy_lower == "kalman_fair_value":
-        return kalman_fair_value(prices)
+        return kalman_fair_value(get_prices())
     if strategy_lower == "meth_rwa":
-        return meth_rwa(prices)
+        return meth_rwa(get_prices())
 
-    # Candle-based algos (need OHLC)
+    # Candle-based algos (need OHLC). Keep price_history conversion lazy as well:
+    # pure OHLC strategies should not allocate an unused price list.
+    cdicts = get_cdicts()
     if cdicts and len(cdicts) >= lookback:
         if strategy_lower == "trend_following":
-            return ma_crossover(prices, fast=max(2, lookback // 2), slow=lookback)
+            return ma_crossover(get_prices(), fast=max(2, lookback // 2), slow=lookback)
         if strategy_lower == "mean_reversion":
-            return z_score(prices, lookback=lookback)
+            return z_score(get_prices(), lookback=lookback)
         if strategy_lower == "adx_filter":
             return adx_filter(cdicts, period=14, threshold=25.0)
         if strategy_lower == "supertrend":
@@ -141,10 +157,10 @@ def compute_strategy_signal(
         return _signal_funding_oi_filter(plan, price_history, candles)
 
     if strategy_lower == "demo_mode":
-        return _signal_demo_mode(prices)
+        return _signal_demo_mode(get_prices())
 
     # Default: momentum
-    return simple_momentum(prices, lookback=lookback)
+    return simple_momentum(get_prices(), lookback=lookback)
 
 
 def _signal_demo_mode(prices: List[float]) -> Tuple[float, str]:
