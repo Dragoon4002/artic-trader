@@ -11,20 +11,23 @@ def linear_regression_channel(
     """Deviation from linear regression line. Trade reversion to line."""
     if len(prices) < lookback:
         return 0.0, f"warming up ({len(prices)}/{lookback})"
-    x = list(range(lookback))
     y = prices[-lookback:]
-    n = len(x)
-    sx, sy = sum(x), sum(y)
-    sxx = sum(xi * xi for xi in x)
-    sxy = sum(xi * yi for xi, yi in zip(x, y))
+    n = lookback
+    sx = n * (n - 1) // 2
+    sxx = n * (n - 1) * (2 * n - 1) // 6
+    sy = sum(y)
+    sxy = sum(xi * yi for xi, yi in enumerate(y))
     den = n * sxx - sx * sx
     if den == 0:
         return 0.0, "singular"
     slope = (n * sxy - sx * sy) / den
     intercept = (sy - slope * sx) / n
     pred = intercept + slope * (n - 1)
-    residuals = [yi - (intercept + slope * xi) for xi, yi in zip(x, y)]
-    var = sum(r * r for r in residuals) / len(residuals)
+    residual_sum_sq = 0.0
+    for xi, yi in enumerate(y):
+        residual = yi - (intercept + slope * xi)
+        residual_sum_sq += residual * residual
+    var = residual_sum_sq / n
     std = math.sqrt(var) if var > 0 else 1e-10
     p = prices[-1]
     dev = (p - pred) / std if std else 0
