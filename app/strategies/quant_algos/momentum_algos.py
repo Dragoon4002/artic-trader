@@ -131,24 +131,37 @@ def macd_signal(
     """MACD line vs signal line. Signal = (macd - signal_line) normalized."""
     if len(prices) < slow + signal_period:
         return 0.0, f"warming up ({len(prices)}/{slow+signal_period})"
-    # EMA fast and slow
-    def ema_series(data: List[float], period: int) -> List[float]:
-        k = 2 / (period + 1)
-        out = []
-        ema = sum(data[:period]) / period
-        out.append(ema)
-        for i in range(period, len(data)):
-            ema = data[i] * k + ema * (1 - k)
-            out.append(ema)
-        return out
-    ema_f = ema_series(prices, fast)
-    ema_s = ema_series(prices, slow)
-    # Align EMAs: ema_s index j = price index j+slow-1; ema_f index j+slow-fast = same price
-    macd_line = [ema_f[j + slow - fast] - ema_s[j] for j in range(len(ema_s))]
-    if len(macd_line) < signal_period:
+    k_fast = 2 / (fast + 1)
+    k_slow = 2 / (slow + 1)
+    fast_sum = 0.0
+    slow_sum = 0.0
+    ema_fast = None
+    ema_slow = None
+    tail_start = len(prices) - signal_period
+    macd_tail: Deque[float] = deque(maxlen=signal_period)
+
+    for i, price in enumerate(prices):
+        if i < fast:
+            fast_sum += price
+            if i == fast - 1:
+                ema_fast = fast_sum / fast
+        else:
+            ema_fast = price * k_fast + ema_fast * (1 - k_fast)
+
+        if i < slow:
+            slow_sum += price
+            if i == slow - 1:
+                ema_slow = slow_sum / slow
+        else:
+            ema_slow = price * k_slow + ema_slow * (1 - k_slow)
+
+        if i >= tail_start and ema_fast is not None and ema_slow is not None:
+            macd_tail.append(ema_fast - ema_slow)
+
+    if len(macd_tail) < signal_period:
         return 0.0, "macd warmup"
-    sig_ema = sum(macd_line[-signal_period:]) / signal_period  # simplified signal line
-    macd_val = macd_line[-1]
+    sig_ema = sum(macd_tail) / signal_period  # simplified signal line
+    macd_val = macd_tail[-1]
     diff = macd_val - sig_ema
     # Normalize by recent price for scale
     scale = prices[-1] * 0.01 if prices[-1] else 1
