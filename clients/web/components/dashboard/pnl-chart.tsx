@@ -22,11 +22,18 @@ const SERIES_COLORS = [
 
 const TOTAL_KEY = "__total"
 const TOTAL_COLOR = "#F2F0EB"
+const MAX_RENDERED_POINTS = 600
 
 interface Point {
   t: number // epoch ms (X axis)
   label: string // ISO-ish human tick
   [agentKey: string]: number | string
+}
+
+interface SamplePoint {
+  index: number
+  t: number
+  total: number
 }
 
 export interface PnlChartProps {
@@ -297,28 +304,59 @@ function build(
     return { data: [], agentKeys }
   }
 
-  const running: Record<string, number> = Object.fromEntries(agentKeys.map((a) => [a.id, 0]))
   const startTs = new Date(closed[0].closed_at!).getTime() - 1
+  const agentIdSet = new Set(agentKeys.map((a) => a.id))
+  const samplePoints: SamplePoint[] = [{ index: 0, t: startTs, total: 0 }]
 
-  const data: Point[] = [
-    {
+  let runningTotal = 0
+  for (let i = 0; i < closed.length; i++) {
+    const tr = closed[i]
+    if (agentIdSet.has(tr.agent_id)) {
+      runningTotal += tr.pnl as number
+    }
+    samplePoints.push({
+      index: i + 1,
+      t: new Date(tr.closed_at!).getTime(),
+      total: runningTotal,
+    })
+  }
+
+  const selectedIndexes = selectLttbIndexes(samplePoints, MAX_RENDERED_POINTS)
+  const currentValues: Record<string, number> = {}
+  for (const agent of agentKeys) {
+    currentValues[agent.id] = 0
+  }
+
+  const data: Point[] = []
+  runningTotal = 0
+
+  if (selectedIndexes.has(0)) {
+    data.push({
       t: startTs,
       label: fmtTick(new Date(startTs)),
-      ...Object.fromEntries(agentKeys.map((a) => [a.id, 0])),
+      ...currentValues,
       [TOTAL_KEY]: 0,
-    },
-  ]
-
-  for (const tr of closed) {
-    running[tr.agent_id] = (running[tr.agent_id] ?? 0) + (tr.pnl as number)
-    const ts = new Date(tr.closed_at!).getTime()
-    const total = agentKeys.reduce((s, a) => s + (running[a.id] ?? 0), 0)
-    data.push({
-      t: ts,
-      label: fmtTick(new Date(tr.closed_at!)),
-      ...Object.fromEntries(agentKeys.map((a) => [a.id, running[a.id] ?? 0])),
-      [TOTAL_KEY]: total,
     })
+  }
+
+  for (let i = 0; i < closed.length; i++) {
+    const tr = closed[i]
+    if (agentIdSet.has(tr.agent_id)) {
+      const pnl = tr.pnl as number
+      currentValues[tr.agent_id] = (currentValues[tr.agent_id] ?? 0) + pnl
+      runningTotal += pnl
+    }
+
+    const sampleIndex = i + 1
+    if (selectedIndexes.has(sampleIndex)) {
+      const closedAt = new Date(tr.closed_at!)
+      data.push({
+        t: closedAt.getTime(),
+        label: fmtTick(closedAt),
+        ...currentValues,
+        [TOTAL_KEY]: runningTotal,
+      })
+    }
   }
 
   return { data, agentKeys }
@@ -331,6 +369,56 @@ function fmtTick(d: Date) {
   const h = d.getUTCHours().toString().padStart(2, "0")
   const m = d.getUTCMinutes().toString().padStart(2, "0")
   return `${month} ${day} ${h}:${m}`
+}
+
+function selectLttbIndexes(points: SamplePoint[], threshold: number): Set<number> {
+  if (threshold >= points.length || threshold < 3) {
+    return new Set(points.map((point) => point.index))
+  }
+
+  const sampled = new Set<number>([points[0].index])
+  const bucketSize = (points.length - 2) / (threshold - 2)
+  let anchorIndex = 0
+
+  for (let i = 0; i < threshold - 2; i++) {
+    const avgStart = Math.floor((i + 1) * bucketSize) + 1
+    const avgEnd = Math.min(Math.floor((i + 2) * bucketSize) + 1, points.length)
+    const avgLength = avgEnd - avgStart
+
+    let avgT = 0
+    let avgTotal = 0
+    for (let j = avgStart; j < avgEnd; j++) {
+      avgT += points[j].t
+      avgTotal += points[j].total
+    }
+    avgT /= avgLength || 1
+    avgTotal /= avgLength || 1
+
+    const rangeStart = Math.floor(i * bucketSize) + 1
+    const rangeEnd = Math.min(Math.floor((i + 1) * bucketSize) + 1, points.length - 1)
+    const anchor = points[anchorIndex]
+    const anchorTotal = anchor.total
+    let nextAnchor = points[rangeStart]
+    let maxArea = -1
+
+    for (let j = rangeStart; j < rangeEnd; j++) {
+      const candidate = points[j]
+      const area = Math.abs(
+        (anchor.t - avgT) * (candidate.total - anchorTotal) -
+          (anchor.t - candidate.t) * (avgTotal - anchorTotal),
+      )
+      if (area > maxArea) {
+        maxArea = area
+        nextAnchor = candidate
+        anchorIndex = j
+      }
+    }
+
+    sampled.add(nextAnchor.index)
+  }
+
+  sampled.add(points[points.length - 1].index)
+  return sampled
 }
 
 interface TooltipPayloadRow {
