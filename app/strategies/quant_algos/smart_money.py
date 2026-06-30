@@ -30,17 +30,15 @@ def _atr(candles: List[dict], period: int = 14) -> float:
     return sum(tr_list[-period:]) / period if len(tr_list) >= period else 0.0
 
 
-def _obv_series(candles: List[dict]) -> List[float]:
-    obv = 0.0
-    out = [0.0]
-    for i in range(1, len(candles)):
+def _obv_trending_up(candles: List[dict], lookback: int) -> bool:
+    obv_delta = 0.0
+    for i in range(len(candles) - lookback, len(candles)):
         v = candles[i].get("volume", 0) or 0
         if candles[i]["close"] >= candles[i - 1]["close"]:
-            obv += v
+            obv_delta += v
         else:
-            obv -= v
-        out.append(obv)
-    return out
+            obv_delta -= v
+    return obv_delta > 0
 
 
 def smart_money(
@@ -75,10 +73,7 @@ def smart_money(
         return 0.0, "doji / flat candle"
     close_pos = (close - low) / (high - low)  # 0..1, 1 = at high
 
-    obv = _obv_series(candles)
-    obv_now = obv[-1]
-    obv_then = obv[-(obv_window + 1)]
-    obv_up = obv_now > obv_then
+    obv_up = _obv_trending_up(candles, obv_window)
 
     vol_ok = vol_ratio >= vol_mult
     close_ok = close_pos >= (1.0 - close_top_frac)
