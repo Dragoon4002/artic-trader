@@ -3,11 +3,14 @@ Pyth Network price client — fetches live prices from Hermes REST API.
 No API key needed (Hermes is public).
 """
 import time
+import threading
+from functools import wraps
 from typing import Dict, List, Optional
 
-import requests
+import httpx
 
 HERMES_URL = "https://hermes.pyth.network"
+PRICE_TTL = 5  # seconds — Pyth publishes every ~2.5s
 
 # Verified feed IDs from hermes.pyth.network/v2/price_feeds (Apr 2026)
 PYTH_FEED_IDS: Dict[str, str] = {
@@ -77,6 +80,8 @@ def _parse_conf(price_info: dict) -> float:
 class PythClient:
     def __init__(self, timeout: int = 10):
         self._timeout = timeout
+        self._client = httpx.Client(timeout=timeout)
+        self._cache: Dict[str, tuple[float, float]] = {}
 
     def _feed_id(self, symbol: str) -> Optional[str]:
         base = _normalize_base(symbol)
@@ -86,19 +91,26 @@ class PythClient:
         return self._feed_id(symbol) is not None
 
     def get_price(self, symbol: str) -> Optional[float]:
+        """Fetch current price with TTL cache (5s)."""
         feed_id = self._feed_id(symbol)
         if not feed_id:
             return None
+        cache_key = f"price:{feed_id}"
+        now = time.monotonic()
+        cached = self._cache.get(cache_key)
+        if cached and (now - cached[0]) < PRICE_TTL:
+            return cached[1]
         try:
-            r = requests.get(
+            r = self._client.get(
                 f"{HERMES_URL}/v2/updates/price/latest",
                 params={"ids[]": feed_id},
-                timeout=self._timeout,
             )
             r.raise_for_status()
             parsed = r.json().get("parsed", [])
             if parsed:
-                return _parse_price(parsed[0]["price"])
+                price = _parse_price(parsed[0]["price"])
+                self._cache[cache_key] = (now, price)
+                return price
         except Exception as e:
             print(f"[PYTH] price fetch failed for {symbol}: {e}")
         return None
@@ -117,10 +129,9 @@ class PythClient:
         if not feed_id:
             return None
         try:
-            r = requests.get(
+            r = self._client.get(
                 f"{HERMES_URL}/v2/updates/price/latest",
                 params={"ids[]": feed_id},
-                timeout=self._timeout,
             )
             r.raise_for_status()
             parsed = r.json().get("parsed", [])
@@ -146,10 +157,9 @@ class PythClient:
         if not ids:
             return {}
         try:
-            r = requests.get(
+            r = self._client.get(
                 f"{HERMES_URL}/v2/updates/price/latest",
                 params=[("ids[]", fid) for fid in ids],
-                timeout=self._timeout,
             )
             r.raise_for_status()
             out: Dict[str, float] = {}
